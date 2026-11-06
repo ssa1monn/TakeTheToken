@@ -1,3 +1,4 @@
+import { newsText, newsTitle } from './campus-copy.js';
 import { currentClock, timeLabel } from './campus.js';
 import { dateObjectForDay } from './market.js';
 
@@ -6,27 +7,13 @@ const clockMinute = point => finite(point.minute) ? point.minute : Number(point.
 const dayLabel = date => date.slice(5).replace('-', '.');
 const direction = value => value > .000001 ? 'cc-up' : value < -.000001 ? 'cc-down' : 'cc-flat';
 
-/** Monotone cubic control points stay inside each observed segment's price range. */
-export function monotoneSegments(points) {
-  if (points.length < 2) return [];
-  const slopes = points.slice(1).map((point, i) => (point.y-points[i].y)/(point.x-points[i].x));
-  const tangents = points.map((point,i) => i===0 ? slopes[0] : i===points.length-1 ? slopes.at(-1) : slopes[i-1]*slopes[i] <= 0 ? 0 : 2/(1/slopes[i-1]+1/slopes[i]));
-  for (let i=0;i<slopes.length;i++) {
-    if (slopes[i] === 0) { tangents[i]=0; tangents[i+1]=0; continue; }
-    const alpha=tangents[i]/slopes[i], beta=tangents[i+1]/slopes[i];
-    const length=Math.hypot(alpha,beta);
-    if (length>3) { tangents[i]=3/length*alpha*slopes[i]; tangents[i+1]=3/length*beta*slopes[i]; }
-  }
-  return points.slice(1).map((end,i)=>{
-    const start=points[i], third=(end.x-start.x)/3;
-    return { start, c1:{x:start.x+third,y:start.y+tangents[i]*third}, c2:{x:end.x-third,y:end.y-tangents[i+1]*third}, end };
-  });
+/** Connect recorded observations directly, without interpolated curves or invented points. */
+export function priceLinePath(points) {
+  return points.map((point, index) => `${index ? 'L' : 'M'}${point.x},${point.y}`).join(' ');
 }
 
-export function smoothPath(points) {
-  if (!points.length) return '';
-  return `M${points[0].x},${points[0].y} ${monotoneSegments(points).map(segment=>`C${segment.c1.x},${segment.c1.y} ${segment.c2.x},${segment.c2.y} ${segment.end.x},${segment.end.y}`).join(' ')}`.trim();
-}
+// Compatibility for older callers; this now produces the same straight price path.
+export const smoothPath = priceLinePath;
 
 /** Aggregate recorded observations only. No fabricated high, low or event is added here. */
 export function buildCandles(history, clock, range = 'month') {
@@ -74,12 +61,12 @@ export function buildCandles(history, clock, range = 'month') {
 
 export function createCandleChartUI({ getState, esc, number, pct, icon }) {
   const isStory = cause => ['news','review'].includes(cause.type);
-  const labelFor = cause => ({ news: '캠퍼스 소식', review: '강의평 반영' })[cause.type] ?? '시연 변동';
-  const variationTitle = cause => /한도|반올림|조정/.test(cause.title ?? '') ? '가격 한도·반올림' : cause.type === 'flow' ? '시연 변동' : cause.title || '시연 변동';
+  const labelFor = cause => ({ news: '캠퍼스 소식', review: '강의평 반영' })[cause.type] ?? '시장 변동';
+  const variationTitle = cause => /한도|반올림|조정/.test(cause.title ?? '') ? '가격 한도·반올림' : cause.type === 'flow' ? '시장 변동' : newsText(cause.title) || '시장 변동';
   const precisePct = value => Math.abs(value) > 0 && Math.abs(value) < .00005 ? `${value > 0 ? '+' : ''}${(value*100).toFixed(4)}%` : pct(value);
 
   function causeCard(cause) {
-    return `<article class="cc-cause"><div class="cc-cause-title"><span class="cc-cause-label cc-${esc(cause.type)}">${labelFor(cause)}</span><strong>${esc(cause.title)}</strong><b class="${direction(cause.impact ?? 0)}">${pct(cause.impact ?? 0)}</b></div>${cause.summary ? `<p>${esc(cause.summary)}</p>` : ''}${cause.type === 'review' ? `<div class="cc-review-stats">${finite(cause.count) ? `<span>응답 <strong>${cause.count}명</strong></span>` : ''}${finite(cause.score) ? `<span>회차 보정점수 <strong>${number(cause.score)} / 100</strong></span>` : ''}</div>${(cause.reviews ?? []).slice(0, 3).map(review => `<blockquote><span>${esc(review.nickname ?? '가상 수강생')}${finite(review.score) ? `<small>★ ${(1 + review.score / 25).toFixed(1)}</small>` : ''}</span><p>${esc(review.comment || '점수로 수업 경험을 남겼어요.')}</p></blockquote>`).join('')}${cause.reviewsOmitted ? '<p>오래된 기록은 응답 수와 점수만 보관하고 있어요.</p>' : ''}` : ''}</article>`;
+    return `<article class="cc-cause"><div class="cc-cause-title"><span class="cc-cause-label cc-${esc(cause.type)}">${labelFor(cause)}</span><strong>${esc(newsTitle(cause.title))}</strong><b class="${direction(cause.impact ?? 0)}">${pct(cause.impact ?? 0)}</b></div>${cause.summary ? `<p>${esc(newsText(cause.summary))}</p>` : ''}${cause.type === 'review' ? `<div class="cc-review-stats">${finite(cause.count) ? `<span>응답 <strong>${cause.count}명</strong></span>` : ''}${finite(cause.score) ? `<span>회차 보정점수 <strong>${number(cause.score)} / 100</strong></span>` : ''}</div>${(cause.reviews ?? []).slice(0, 3).map(review => `<blockquote><span>${esc(review.nickname ?? '수강생')}${finite(review.score) ? `<small>★ ${(1 + review.score / 25).toFixed(1)}</small>` : ''}</span><p>${esc(review.comment || '점수로 수업 경험을 남겼어요.')}</p></blockquote>`).join('')}${cause.reviewsOmitted ? '<p>오래된 기록은 응답 수와 점수만 보관하고 있어요.</p>' : ''}` : ''}</article>`;
   }
 
   function selectedPanel(candle) {
@@ -92,9 +79,9 @@ export function createCandleChartUI({ getState, esc, number, pct, icon }) {
       const total = update.causes.reduce((sum, cause) => sum + (finite(cause.impact) ? cause.impact : 0), 0);
       const residual = update.change - total;
       const variations=update.causes.filter(cause=>!isStory(cause));
-      return `<div class="cc-update"><div class="cc-update-heading"><span>${dayLabel(update.date)} ${timeLabel(update.minute)} 반영</span><strong>${number(update.open)} <i>→</i> ${number(update.close)} <small>유니코인</small> <b class="${direction(update.change)}">${pct(update.change)}</b></strong></div>${update.causes.filter(isStory).map(causeCard).join('')}${variations.length ? `<div class="cc-variation-summary"><span>시연 변동·가격 조정</span><b class="${direction(variations.reduce((sum,cause)=>sum+(cause.impact??0),0))}">${pct(variations.reduce((sum,cause)=>sum+(cause.impact??0),0))}</b></div><details class="cc-adjustment-details"><summary>세부값</summary>${variations.map(cause=>`<div><span>${esc(variationTitle(cause))}</span><b class="${direction(cause.impact??0)}">${precisePct(cause.impact??0)}</b></div>`).join('')}</details>` : ''}${Math.abs(residual) > .0000001 ? `<div class="cc-rounding"><span>${update.causes.length ? '상하한·반올림 조정' : '이전 기록 · 세부 요인 미저장'}</span><b class="${direction(residual)}">${precisePct(residual)}</b></div>` : ''}</div>`;
+      return `<div class="cc-update"><div class="cc-update-heading"><span>${dayLabel(update.date)} ${timeLabel(update.minute)} 반영</span><strong>${number(update.open)} <i>→</i> ${number(update.close)} <small>유니코인</small> <b class="${direction(update.change)}">${pct(update.change)}</b></strong></div>${update.causes.filter(isStory).map(causeCard).join('')}${variations.length ? `<div class="cc-variation-summary"><span>시장 변동·가격 조정</span><b class="${direction(variations.reduce((sum,cause)=>sum+(cause.impact??0),0))}">${pct(variations.reduce((sum,cause)=>sum+(cause.impact??0),0))}</b></div><details class="cc-adjustment-details"><summary>세부값</summary>${variations.map(cause=>`<div><span>${esc(variationTitle(cause))}</span><b class="${direction(cause.impact??0)}">${precisePct(cause.impact??0)}</b></div>`).join('')}</details>` : ''}${Math.abs(residual) > .0000001 ? `<div class="cc-rounding"><span>${update.causes.length ? '상하한·반올림 조정' : '이전 기록 · 세부 요인 미저장'}</span><b class="${direction(residual)}">${precisePct(residual)}</b></div>` : ''}</div>`;
     };
-    return `<section class="cc-event-panel" aria-label="선택 시점의 가격 변동 이유"><header><div><span>CHART STORY</span><h3>${candle.label} · 이때 무슨 일이?</h3></div><button data-action="chart-event" data-id="" aria-label="가격 변동 이유 닫기">${icon('close')}</button></header><div class="cc-event-result"><span>이 봉의 가격</span><strong>${number(candle.open)} <i>→</i> ${number(candle.close)} <em>유니코인</em></strong><b class="${direction(change)}">${pct(change)}</b><small>뉴스 ${candle.newsCount} · 강의평 반영 ${candle.reviewCount}</small></div>${stories.map(renderUpdate).join('')}${variationOnly.length ? `<details class="cc-variation-history"><summary>시연 변동 ${variationOnly.length}회 <span>추가 가격 변화 보기</span>${icon('chevron')}</summary>${variationOnly.map(renderUpdate).join('')}</details>` : ''}${withoutEvidence.length ? '<p class="cc-no-cause">이전 버전 기록: 원인 기록 없음. 당시 가격만 남아 있어 뉴스나 강의평을 연결할 수 없어요.</p>' : !updates.length ? '<p class="cc-no-cause">이 구간에는 새로 반영된 뉴스나 강의평이 없어요.</p>' : ''}<p class="cc-method-note">각 요인의 %는 해당 갱신 직전 가격 기준이에요. 봉 전체 등락률은 갱신별 변화를 복리로 연결한 값이에요.${candle.legacy ? '<br>이전 기록의 고가·저가는 저장된 종가 사이 범위로 표시해요.' : ''}</p></section>`;
+    return `<section class="cc-event-panel" aria-label="선택 시점의 가격 변동 이유"><header><div><span>CHART STORY</span><h3>${candle.label} · 이때 무슨 일이?</h3></div><button data-action="chart-event" data-id="" aria-label="가격 변동 이유 닫기">${icon('close')}</button></header><div class="cc-event-result"><span>이 봉의 가격</span><strong>${number(candle.open)} <i>→</i> ${number(candle.close)} <em>유니코인</em></strong><b class="${direction(change)}">${pct(change)}</b><small>뉴스 ${candle.newsCount} · 강의평 반영 ${candle.reviewCount}</small></div>${stories.map(renderUpdate).join('')}${variationOnly.length ? `<details class="cc-variation-history"><summary>시장 변동 ${variationOnly.length}회 <span>추가 가격 변화 보기</span>${icon('chevron')}</summary>${variationOnly.map(renderUpdate).join('')}</details>` : ''}${withoutEvidence.length ? '<p class="cc-no-cause">해당 시점은 가격만 보관되어 있어 뉴스나 강의평을 연결할 수 없어요.</p>' : !updates.length ? '<p class="cc-no-cause">이 구간에는 새로 반영된 뉴스나 강의평이 없어요.</p>' : ''}<p class="cc-method-note">각 요인의 %는 해당 갱신 직전 가격 기준이에요. 봉 전체 등락률은 갱신별 변화를 복리로 연결한 값이에요.${candle.legacy ? '<br>이전 기록의 고가·저가는 저장된 종가 사이 범위로 표시해요.' : ''}</p></section>`;
   }
 
   function render(stock, professor, { range = 'month', chartType = 'candle', selectedCandleKey = null } = {}) {
@@ -124,9 +111,9 @@ export function createCandleChartUI({ getState, esc, number, pct, icon }) {
       const cx = x(index), delta = candle.close - candle.open;
       return `<g class="cc-candle ${direction(delta)} ${candle.key === selectedCandleKey ? 'is-selected' : ''}"><line x1="${cx}" x2="${cx}" y1="${y(candle.high)}" y2="${y(candle.low)}"/><rect x="${cx - bodyWidth/2}" y="${Math.min(y(candle.open),y(candle.close))}" width="${bodyWidth}" height="${Math.max(1.5,Math.abs(y(candle.open)-y(candle.close)))}" rx=".7"/></g>`;
     }).join('');
-    const path = smoothPath(points);
+    const path = priceLinePath(points);
     const lineColor=periodChange < 0 ? '#3879ed' : '#ef4b61';
-    const line = `<path class="cc-smooth-line" d="${path}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${points.at(-1).x}" cy="${points.at(-1).y}" r="3" fill="${lineColor}"/>`;
+    const line = `<path class="cc-price-line" d="${path}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="miter"/><circle cx="${points.at(-1).x}" cy="${points.at(-1).y}" r="3" fill="${lineColor}"/>`;
     const labels = [...new Set([0, Math.floor((candles.length-1)/3),Math.floor((candles.length-1)*2/3),candles.length-1])].map(index => `<text x="${x(index)}" y="319" text-anchor="${index===0?'start':index===candles.length-1?'end':'middle'}">${range === 'today' ? timeLabel(candles[index].minute) : candles[index].label}</text>`).join('');
     const hits = candles.map((candle,index) => `<rect class="cc-candle-hit" data-action="chart-event" data-id="${esc(candle.key)}" x="${x(index)-slot/2}" y="${top}" width="${slot}" height="${bottom-top}" fill="transparent"><title>${candle.label}: 시가 ${number(candle.open)}, 고가 ${number(candle.high)}, 저가 ${number(candle.low)}, 종가 ${number(candle.close)} 유니코인. 클릭하면 변동 이유.</title></rect>`).join('');
     const markers = candles.map((candle,index) => candle.eventCount ? `<button class="cc-event-marker ${candle.key===selectedCandleKey?'selected':''} ${candle.newsCount && candle.reviewCount ? 'mixed' : candle.newsCount ? 'news' : 'review'}" style="left:${x(index)/width*100}%" data-action="chart-event" data-id="${esc(candle.key)}" aria-label="${candle.label} 뉴스 ${candle.newsCount}건, 강의평 ${candle.reviewCount}건 보기" aria-pressed="${candle.key===selectedCandleKey}" title="${candle.label} · 뉴스 ${candle.newsCount} / 강의평 ${candle.reviewCount}"><span>${candle.newsCount && candle.reviewCount ? 'N·R' : candle.newsCount ? 'N' : 'R'}</span>${candle.eventCount > 1 ? `<small>${candle.eventCount}</small>` : ''}</button>` : '').join('');

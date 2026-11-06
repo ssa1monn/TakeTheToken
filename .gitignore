@@ -3,3 +3,13 @@
 
 # 컷신 원본 PNG는 로컬에만 (게임은 WebP 사용)
 assets/cutscenes/**/*.png
+
+# 인천대 거래소 (GO)
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+*.tar.gz
+*.tgz
+*.zip
