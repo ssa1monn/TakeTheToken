@@ -462,7 +462,8 @@ function stepPlayer(dt) {
 
   // 아바타 위치 · 방향 · 걷기 모션
   avatar.root.position.set(player.p[0], 0, -player.p[1]);
-  const cur = avatar.root.rotation.y, want = player.face;
+  // player.face는 지도 기준(북=0, 시계방향). 3D에서 북쪽은 -z이고 모델 정면은 +z → π - face
+  const cur = avatar.root.rotation.y, want = Math.PI - player.face;
   let diff = ((want - cur + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
   avatar.root.rotation.y = cur + diff * Math.min(1, dt * 12);
   player.bob += dt * (player.moving ? (player.running ? 18 : 12) : 0);
@@ -529,6 +530,7 @@ window.__world = {
   get near() { return near?.name || null; },
   get faded() { return [...faded].map(m => m.userData.name || m.name); },
   get cam() { return camera.position.toArray().map(Math.round); },
+  get facing() { const v = new THREE.Vector3(0, 0, 1).applyQuaternion(avatar.root.quaternion); return [v.x, -v.z]; }, // 지도 좌표 정면
   walkTo(name) { const c = colliders.find(x => x.name.includes(name)); const p = c && doorPoint(c); if (p) setTarget(p, c); return !!moveTarget; },
 };
 
