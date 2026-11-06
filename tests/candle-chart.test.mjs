@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCandles, createCandleChartUI, monotoneSegments } from '../dist/candle-chart.js';
+import { buildCandles, createCandleChartUI, priceLinePath, smoothPath } from '../dist/candle-chart.js';
 
 const clock = { date: '2026-11-06', minute: 960 };
 const point = (minute, open, high, low, close, causes = [], extra = {}) => ({ date: clock.date, day: minute, minute, open, high, low, close, price: close, causes, ...extra });
@@ -82,21 +82,16 @@ test('chart stories retain dated snapshots, escape student text and expose keybo
   assert.ok(chart.render({history:[]},{name:'교수'},{range:'today'}).includes('첫 봉'));
 });
 
-test('smooth line preserves every observation and never overshoots each segment', () => {
+test('price lines connect every recorded observation with straight segments and preserve empty/single paths', () => {
   const points=[{x:0,y:100},{x:1,y:180},{x:2,y:110},{x:4,y:110},{x:9,y:45},{x:10,y:47},{x:11,y:250}];
-  const segments=monotoneSegments(points);
-  assert.equal(segments.length,points.length-1);
-  for (const [i,segment] of segments.entries()) {
-    assert.deepEqual(segment.start,points[i]);
-    assert.deepEqual(segment.end,points[i+1]);
-    const lower=Math.min(segment.start.y,segment.end.y), upper=Math.max(segment.start.y,segment.end.y);
-    for (let n=0;n<=100;n++) {
-      const t=n/100, u=1-t;
-      const value=u*u*u*segment.start.y+3*u*u*t*segment.c1.y+3*u*t*t*segment.c2.y+t*t*t*segment.end.y;
-      assert.ok(value>=lower-1e-10 && value<=upper+1e-10, 'no price outside observed bounds');
-    }
-  }
-  assert.deepEqual(monotoneSegments([{x:0,y:10}]),[]);
+  const before=structuredClone(points);
+  const path=priceLinePath(points);
+  assert.equal(path,'M0,100 L1,180 L2,110 L4,110 L9,45 L10,47 L11,250');
+  assert.deepEqual(path.match(/[A-Za-z]/g), ['M', ...Array(points.length-1).fill('L')]);
+  assert.equal(smoothPath(points),path,'legacy callers must also use straight segments');
+  assert.equal(priceLinePath([]),'');
+  assert.equal(priceLinePath([{x:0,y:10}]),'M0,10');
+  assert.deepEqual(points,before,'rendering leaves recorded coordinates unchanged');
 });
 
 test('selected chart point survives mount setup and simulation variations stay secondary', () => {
@@ -105,7 +100,8 @@ test('selected chart point survives mount setup and simulation variations stay s
   const stock={history:[point(900,100,105,99,103,[review, {...variation,impact:0}]),point(930,103,104,100,102,[{...variation,type:'flow',title:'가상 매매',summary:'익절'}])]};
   const html=chart.render(stock,{name:'교수'},{range:'today',chartType:'line',selectedCandleKey:'2026-11-06:T900'});
   assert.ok(html.includes('data-selected-key="2026-11-06:T900"'));
-  assert.ok(html.includes('class="cc-smooth-line"'));
+  const linePath=html.match(/<path class="cc-price-line" d="([^"]+)"/)[1];
+  assert.deepEqual(linePath.match(/[A-Za-z]/g),['M','L'],'rendered detail line has one straight segment between the two observed candles');
   assert.ok(html.includes('유니코인'));
   assert.ok(!html.includes('가상 매매')&&!html.includes('익절'));
   assert.equal((html.match(/<article class="cc-cause">/g)??[]).length,1,'only the review appears as a major story card');

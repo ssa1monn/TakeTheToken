@@ -26,14 +26,14 @@ export function randomCampusEvent(state, catalog, clock) {
   const { template, targets } = choose(balanced.length ? balanced : pool, random);
   const target = choose(targets, random);
   const targetId = typeof target === 'string' ? target : target.id;
-  const titleTarget = typeof target === 'string' ? target : `${target.name} 종목`;
+  const titleTarget = typeof target === 'string' ? target : `${target.name} 교수님`;
   const id = `auto:${clock.date}:${template.key}:${targetId}`;
   if (state.events.some(e => e.id === id)) return null;
   const event = {
     ...template, id, targetId, title: `${titleTarget} · ${template.title}`,
     baseImpact: template.impact, impact: template.impact * (state.volatilityMode === 'calm' ? 1 : 3.5),
     day: state.day + 1, date: clock.date, minute: clock.minute,
-    applied: false, source: '가상 캠퍼스 뉴스', generated: true,
+    applied: false, source: '캠퍼스 뉴스', generated: true,
   };
   state.events.push(event);
   state.generatedEventCount++;
@@ -109,12 +109,12 @@ export function ensureDemoContent(state, catalog, { now } = {}) {
       const template = notices[index % notices.length];
       const target = template.type === 'department' ? DEPARTMENTS[index % DEPARTMENTS.length] : catalog.professors[Math.floor(random() * catalog.professors.length)];
       const targetId = typeof target === 'string' ? target : target.id;
-      const titleTarget = typeof target === 'string' ? target : `${target.name} 종목`;
+      const titleTarget = typeof target === 'string' ? target : `${target.name} 교수님`;
       return {
         ...template, id: `archive-event:${index}:${targetId}`, targetId,
         title: `${titleTarget} · ${template.title}`, date: previousDate(clock.date, 5 - Math.floor(index / 4)),
         minute: 555 + (index % 4) * 95, day: 0, impact: 0,
-        source: '가상 캠퍼스 뉴스', archived: true, displayOnly: true, applied: true,
+        source: '캠퍼스 뉴스', archived: true, displayOnly: true, applied: true,
       };
     });
     state.events = [...archive, ...state.events];
@@ -180,7 +180,7 @@ export function advanceSimulation(state, catalog, { minutes = state.speed, now }
 }
 
 export function fastForwardToday(state, catalog) {
-  if (state.clockMode !== 'demo') throw new Error('시간 압축은 가상 시연 모드에서만 사용할 수 있어요.');
+  if (state.clockMode !== 'demo') throw new Error('시간 압축은 시연 모드에서만 사용할 수 있어요.');
   const ending = endOfCampusDay(catalog, currentClock(state));
   let classCount = 0, eventCount = 0;
   while (state.minute < ending) {

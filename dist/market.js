@@ -26,8 +26,8 @@ export function ensureMarketData(state, catalog) {
       for (const cause of point.causes ?? []) if (cause.type === 'flow') {
         cause.type = 'variation';
         if (!cause.id?.startsWith('adjustment:')) {
-          cause.title = '시연 변동';
-          cause.summary = '종목별 가상 가격 변화';
+          cause.title = '시장 변동';
+          cause.summary = '교수님별 주가 변동';
         }
       }
       if (point.contributions && 'flow' in point.contributions) {
@@ -152,11 +152,11 @@ export function queueEvent(state, catalog, { type, targetId }) {
   const event = {
     id, type, targetId, day: state.day + 1, date: clock.date, minute: clock.minute, applied: false,
     impact: type === 'department' ? 0.006 : 0.012,
-    title: type === 'department' ? `${targetId}, 공동 실습 환경 개선` : `${professor.name} 종목, 연구 성과 발표`,
+    title: type === 'department' ? `${targetId}, 공동 실습 환경 개선` : `${professor.name} 교수님, 연구 성과 발표`,
     summary: type === 'department'
-      ? '학과 공통 실습 자원이 확충되는 가상 시나리오입니다. 관련 학과 종목 전체에 같은 효과를 반영합니다.'
-      : '연구 성과가 새로 공개되는 가상 시나리오입니다. 선택한 교수님 종목에 한 번 반영합니다.',
-    source: '시연용 가상 공시',
+      ? '학과 공통 실습 자원이 확충돼요. 해당 학과 교수님 전체에 같은 효과를 반영해요.'
+      : '새 연구 성과가 공개됐어요. 해당 교수님의 주가에 한 번 반영해요.',
+    source: '캠퍼스 공시',
   };
   state.events.push(event);
   return true;
@@ -231,7 +231,7 @@ export function closeMarket(state, catalog, { marketPulse = false, historicalRev
         const delta = movement.deltas[i] + (i===movement.eventAt ? knownImpact : 0);
         pricePath.push(round(clamp(pricePath.at(-1)+open*delta,lower,upper)));
       }
-      causes.push({ id:`variation:${day}:${professor.id}`,type:'variation',title:`시연 변동 · ${movement.label}`,summary:'종목마다 독립적으로 생성한 가상 가격 변화',impact:variation });
+      causes.push({ id:`variation:${day}:${professor.id}`,type:'variation',title:`시장 변동 · ${movement.label}`,summary:'교수님별 주가 변동',impact:variation });
     } else pricePath.push(round(clamp(open*(1+knownImpact),lower,upper)));
     const price = pricePath.at(-1);
     const change = price/open-1;

@@ -116,7 +116,7 @@ test('version 2 cause migration removes trading narratives without touching pric
   const prices=Object.values(state.stocks).map(s=>s.price);
   ensureMarketData(state,catalog);
   assert.equal(point.causes[0].type,'variation');
-  assert.equal(point.causes[0].title,'시연 변동');
+  assert.equal(point.causes[0].title,'시장 변동');
   assert.ok(!/매수|매도|매매|수급/.test(point.causes[0].summary));
   assert.equal(point.contributions.variation,.01);assert.ok(!('flow' in point.contributions));
   assert.equal(stock.contributions.variation,.01);assert.ok(!('flow' in stock.contributions));
