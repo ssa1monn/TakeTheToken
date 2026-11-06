@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>다시 사는 대학생활 발표</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+/* 디자인: Bae 브랜치 style.css의 팔레트와 Pretendard를 그대로 사용 (게임과 같은 분위기) */
+:root{
+  --bg:#f5efe4; --paper:#fffdf8; --ink:#2b2620; --muted:#8a7f70; --line:#e6dccb;
+  --lawn:#8fc27a; --lawn-d:#6fa85c; --accent:#d9534f; --green:#3fa56f; --yellow:#e0a02b; --blue:#4a7bd0;
+  --roof-univ:#d9785a; --roof-dorm:#7a8fb8; --roof-biz:#8d99a8; --wall:#f7f3ea; --wall-d:#e4dccb; --path:#e2d4b5;
+  --stage:#2b2620; --up:#d9534f; --down:#4a7bd0; --radius:14px;
+  --font:Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--stage);font-family:var(--font);color:var(--ink);overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+.num{font-variant-numeric:tabular-nums}
+
+/* 무대: 1280x720 슬라이드를 화면에 맞춰 확대·축소 */
+#stage{position:fixed;inset:0;display:grid;place-items:center}
+#deck{position:relative;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);border-radius:6px;overflow:hidden;padding:64px 80px;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .35s ease}
+.slide.on{opacity:1;visibility:visible}
+@media (prefers-reduced-motion:reduce){.slide{transition:none}}
+
+/* 공통 타이포 */
+.eyebrow{font-size:18px;font-weight:700;letter-spacing:.06em;color:var(--accent);margin:0 0 10px}
+h1{font-size:54px;line-height:1.2;font-weight:800;margin:0;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:42px;line-height:1.25;font-weight:800;margin:0;letter-spacing:-.02em;text-wrap:balance}
+.lead{font-size:22px;line-height:1.6;color:var(--muted);margin:14px 0 0;max-width:46ch}
+.foot{position:absolute;left:80px;right:80px;bottom:28px;display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.body{flex:1;display:flex;gap:40px;margin-top:34px;min-height:0}
+.col{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px}
+.card h3{font-size:22px;margin:0 0 6px}
+.card p{font-size:17px;line-height:1.6;margin:0;color:#5b5247}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;border-radius:999px;padding:4px 12px;background:var(--paper);border:1px solid var(--line)}
+.bul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.bul li{display:grid;grid-template-columns:28px 1fr;gap:10px;font-size:19px;line-height:1.5}
+.bul li b{display:block;font-size:20px}
+.bul li span{color:#5b5247;font-size:17px}
+.bul .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:15px;background:var(--paper);border:1px solid var(--line)}
+.tag-demo{font-size:12px;color:var(--muted);border:1px dashed var(--muted);border-radius:6px;padding:2px 8px}
+
+/* 1. 표지 */
+.cover{padding:0;flex-direction:row}
+.cover .l{flex:1;padding:80px 0 80px 90px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1}
+.cover .badge{align-self:flex-start;font-size:16px;font-weight:700;background:var(--ink);color:var(--paper);border-radius:999px;padding:7px 16px}
+.cover h1{font-size:88px;line-height:1.05;margin-top:26px}
+.cover h1 span{color:var(--accent)}
+.cover .sub{font-size:26px;color:var(--muted);margin-top:18px}
+.cover .team{margin-top:46px;display:flex;gap:14px;align-items:center;font-size:18px}
+.cover .team b{font-size:22px}
+.cover .r{width:620px;position:relative;background:linear-gradient(180deg,#cfe8f7 0%, #e7f2ea 100%)}
+.cover .r svg{position:absolute;inset:0;width:100%;height:100%}
+
+/* 2. 문제 */
+.probs{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:56px}
+.prob{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:34px 30px;min-height:250px;display:flex;flex-direction:column;gap:14px}
+.prob .n{font-size:15px;font-weight:800;color:var(--accent)}
+.prob h3{font-size:27px;line-height:1.35;margin:0;text-wrap:balance}
+.prob p{font-size:19px;line-height:1.6;color:#5b5247;margin:0}
+.punch{margin-top:58px;font-size:34px;font-weight:800;text-align:center}
+.punch em{font-style:normal;color:var(--accent)}
+
+/* 3. 아이디어 */
+.idea{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:30px;align-items:center;flex:1}
+.quote{font-size:38px;font-weight:800;line-height:1.35;letter-spacing:-.02em}
+.quote em{font-style:normal;background:linear-gradient(transparent 60%, #f4d58d 60%)}
+.orbit{position:relative;height:440px}
+.orbit .core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:220px;height:220px;border-radius:50%;background:var(--lawn);color:#fff;display:grid;place-items:center;text-align:center;font-weight:800;font-size:22px;line-height:1.35;box-shadow:0 0 0 14px rgba(143,194,122,.25)}
+.orbit .core small{display:block;font-size:15px;font-weight:600;opacity:.9}
+.sat{position:absolute;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:16px;font-weight:700;display:flex;gap:8px;align-items:center;white-space:nowrap}
+.sat small{display:block;font-weight:500;color:var(--muted);font-size:13px}
+.orbit svg{position:absolute;inset:0;width:100%;height:100%}
+
+/* 4. 게임 화면 재현 */
+.screen{position:relative;border-radius:16px;overflow:hidden;background:#cfe8f7;border:6px solid var(--ink);box-shadow:0 18px 40px -20px rgba(0,0,0,.5)}
+.screen svg.scene{position:absolute;inset:0;width:100%;height:100%}
+.hud{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:10px;align-items:center;background:rgba(255,253,248,.94);border-radius:12px;padding:8px 12px;font-size:12px}
+.hud .logo{font-weight:800;font-size:13px}
+.hud .logo b{color:var(--accent)}
+.hud .sem{display:flex;flex-direction:column;gap:3px;min-width:120px}
+.hud .track{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.hud .track i{display:block;height:100%;width:6%;background:var(--accent)}
+.hud .hs{display:flex;flex-direction:column;gap:3px}
+.hud .bar{height:5px;width:80px;border-radius:3px;background:var(--line);overflow:hidden}
+.hud .bar i{display:block;height:100%}
+.hud .sp{margin-left:auto;display:flex;gap:3px}
+.hud .sp span{background:var(--bg);border-radius:6px;padding:2px 6px}
+.mini{position:absolute;left:14px;top:64px;width:96px;height:96px;border-radius:50%;background:#a7d391;border:4px solid var(--paper);overflow:hidden}
+.mini i{position:absolute;background:var(--roof-univ);border-radius:2px}
+.mini b{position:absolute;left:44px;top:44px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid #fff}
+.clock{position:absolute;left:118px;top:68px;background:rgba(255,253,248,.94);border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700}
+.prompt{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;white-space:nowrap}
+.prompt kbd{background:var(--yellow);color:var(--ink);border-radius:4px;padding:0 6px;margin-right:6px;font-family:inherit}
+.keys{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font-size:11px;color:var(--ink);background:rgba(255,253,248,.8);border-radius:6px;padding:3px 10px;white-space:nowrap}
+.right{position:absolute;right:10px;top:64px;width:170px;background:rgba(255,253,248,.95);border-radius:10px;padding:8px;font-size:11px}
+.right .tabs{display:flex;gap:3px;margin-bottom:6px}
+.right .tabs span{flex:1;text-align:center;background:var(--bg);border-radius:5px;padding:2px 0;font-weight:700}
+.right .tabs span.on{background:var(--ink);color:var(--paper)}
+.right .post{border-top:1px solid var(--line);padding:5px 0;line-height:1.4}
+
+/* 5. 이벤트 모달 */
+.modal{background:var(--paper);border-radius:18px;padding:28px;box-shadow:0 24px 50px -24px rgba(0,0,0,.45);border:1px solid var(--line)}
+.modal .em{font-size:40px}
+.modal h3{font-size:28px;margin:6px 0 8px}
+.modal .place{font-size:14px;color:var(--muted);font-weight:700}
+.modal p{font-size:18px;line-height:1.6;margin:0 0 16px;color:#5b5247}
+.choice{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-top:8px;font-size:17px;font-weight:600;background:var(--bg)}
+.choice small{font-size:13px;color:var(--muted);font-weight:600}
+.choice.pick{border-color:var(--accent);background:#fbe9e7}
+.bamboo{background:#eef5e8;border-radius:12px;padding:14px 16px;font-size:16px;line-height:1.5}
+.bamboo .who{font-size:13px;color:var(--lawn-d);font-weight:700;margin-bottom:2px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.stat b{display:block;font-size:44px;font-weight:800;line-height:1;letter-spacing:-.03em}
+.stat span{font-size:16px;color:#5b5247}
+
+/* 6. 진로 트리 */
+.flow{display:flex;align-items:center;gap:12px;margin-top:28px}
+.flow .st{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 18px;font-size:18px;font-weight:700;white-space:nowrap}
+.flow .st small{display:block;font-size:13px;font-weight:500;color:var(--muted)}
+.flow .ar{color:var(--muted);font-size:22px}
+.tree{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:26px;flex:1}
+.tier{display:flex;flex-direction:column;gap:10px}
+.tier h4{margin:0 0 4px;font-size:18px;color:var(--muted)}
+.node{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:18px;font-weight:700}
+.node small{font-size:13px;font-weight:500;color:var(--muted)}
+.node.next{border-color:var(--green);box-shadow:inset 4px 0 0 var(--green)}
+.ending{margin-top:18px;background:var(--ink);color:var(--paper);border-radius:14px;padding:16px 22px;font-size:19px;display:flex;gap:14px;align-items:center}
+.ending b{color:var(--yellow);white-space:nowrap}
+
+/* 7. 거래소 재현 */
+.xch{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden;font-size:13px}
+.xch .top{background:#314590;color:#fff;display:flex;align-items:center;gap:14px;padding:10px 16px;font-weight:700}
+.xch .top i{font-style:normal;background:#e9b342;color:#314590;border-radius:4px;padding:1px 6px;font-size:11px}
+.xch .idx{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px}
+.xch .idx div{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.xch .idx small{display:block;color:var(--muted);font-size:11px}
+.xch .idx b{font-size:17px}
+.xch table{width:100%;border-collapse:collapse}
+.xch th,.xch td{padding:7px 12px;border-top:1px solid #efe9dd;text-align:left}
+.xch th{font-size:11px;color:var(--muted);font-weight:600}
+.xch td.r,.xch th.r{text-align:right}
+.up{color:var(--up)} .down{color:var(--down)}
+
+/* 8. 총장 시뮬레이터 재현 */
+.pres{display:grid;grid-template-columns:1.1fr .9fr;gap:10px;background:#dfe4ea;border-radius:16px;padding:10px;font-size:12px}
+.pres .doc{background:#fff;border-radius:6px;padding:14px 16px;position:relative;overflow:hidden}
+.pres .doc .t{display:flex;justify-content:space-between;color:#5c6878;font-size:10px;border-bottom:2px solid #16202c;padding-bottom:5px}
+.pres .doc h4{font-size:18px;margin:10px 0 6px;font-family:"Nanum Myeongjo",serif;font-weight:800}
+.pres .opt{border:1px solid #cfd6df;border-radius:4px;padding:6px 8px;margin-top:5px;display:flex;gap:8px}
+.pres .opt.c{border-color:#c3172f;background:#fbe5e8}
+.pres .seal{position:absolute;right:16px;bottom:14px;width:64px;height:64px;border:3px solid #c3172f;border-radius:50%;color:#c3172f;display:grid;place-items:center;font-weight:900;font-size:17px;transform:rotate(-14deg)}
+.pres .gauges{grid-column:1/-1;display:flex;gap:16px;background:#132a45;color:#fff;border-radius:6px;padding:8px 12px}
+.pres .gauges b{font-size:15px;margin-left:4px}
+.pres .board{background:#fff;border-radius:6px;padding:10px 12px}
+.pres .board .p{border-top:1px solid #e3e7ec;padding:6px 0}
+.pres .board .p small{color:#5c6878}
+.pres .board .lk{color:#c3172f;font-size:10px}
+
+/* 9. 연결 */
+.links{display:grid;grid-template-columns:1fr 60px 1fr;gap:14px 0;align-items:center;margin-top:30px}
+.bld{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;gap:12px;align-items:center;font-size:20px;font-weight:700}
+.bld small{display:block;font-size:14px;color:var(--muted);font-weight:500}
+.bld .e{font-size:28px}
+.lk-ar{text-align:center;font-size:26px;color:var(--muted)}
+.cnt{border-radius:14px;padding:16px 18px;font-size:20px;font-weight:700;color:#fff}
+.cnt small{display:block;font-size:14px;font-weight:500;opacity:.9}
+.branch{margin-top:26px;display:flex;gap:12px;align-items:center;font-size:17px;flex-wrap:wrap}
+.branch code{font-family:ui-monospace,Menlo,monospace;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:16px}
+
+/* 10. AI */
+.tools{display:flex;gap:10px;margin-top:14px}
+.tool{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;background:var(--ink);color:var(--paper);border-radius:999px;padding:8px 18px}
+.log{display:flex;flex-direction:column;gap:10px}
+.lg{display:grid;grid-template-columns:54px 1fr;gap:14px;align-items:start}
+.lg .v{font-weight:800;font-size:15px;background:var(--paper);border:1px solid var(--line);border-radius:8px;text-align:center;padding:6px 0}
+.lg .q{background:var(--ink);color:var(--paper);border-radius:12px 12px 12px 4px;padding:9px 14px;font-size:16px;display:inline-block}
+.lg .a{font-size:15px;color:#5b5247;margin-top:6px;line-height:1.5}
+.lg .a b{color:var(--ink)}
+.uses{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.use{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.use b{display:block;font-size:18px;margin-bottom:4px}
+.use span{font-size:15px;color:#5b5247;line-height:1.5}
+
+/* 11. 심사 기준 */
+.crit{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:34px;flex:1}
+.cr{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px;display:flex;flex-direction:column;gap:14px}
+.cr .pt{display:flex;align-items:baseline;gap:8px}
+.cr .pt b{font-size:52px;font-weight:800;line-height:1;color:var(--accent)}
+.cr .pt span{font-size:16px;color:var(--muted)}
+.cr h3{font-size:25px;margin:0}
+.cr .k{font-size:14px;color:var(--muted)}
+.cr ul{margin:0;padding-left:20px;font-size:17px;line-height:1.65;color:#5b5247}
+
+/* 12. 마무리 */
+.demo{display:flex;flex-direction:column;gap:12px}
+.dm{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.dm .n{width:44px;height:44px;border-radius:50%;background:var(--lawn);color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px}
+.dm b{font-size:20px;display:block}
+.dm span{font-size:15px;color:#5b5247}
+.thanks{font-size:72px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.thanks span{color:var(--accent)}
+.members{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+.mb{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center;font-size:18px}
+.mb .blank{border-bottom:2px solid var(--ink);height:28px}
+.mb span{color:#5b5247}
+
+/* 조작 UI */
+#ui{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:10px 16px;color:#d9d1c4;font-size:13px;opacity:.25;transition:opacity .2s}
+#ui:hover,#ui:focus-within{opacity:1}
+#ui button{background:rgba(255,255,255,.1);border:0;border-radius:6px;padding:5px 12px;color:#fff}
+#ui button:focus-visible{outline:2px solid var(--yellow)}
+#prog{position:fixed;left:0;top:0;height:4px;background:var(--accent);transition:width .3s}
+#notes{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);width:min(900px,92vw);background:rgba(20,18,15,.94);color:#f5efe4;border-radius:12px;padding:16px 20px;font-size:17px;line-height:1.7;z-index:5}
+#notes b{color:var(--yellow);font-size:13px;letter-spacing:.06em;display:block;margin-bottom:4px}
+[hidden]{display:none!important}
+
+/* 인쇄: 한 장에 슬라이드 하나 (Ctrl+P → PDF로 저장) */
+@page{size:1280px 720px;margin:0}
+@media print{
+  html,body{overflow:visible;background:#fff;height:auto}
+  #stage{position:static;display:block}
+  #deck{transform:none!important;width:1280px;height:auto}
+  .slide{position:relative;opacity:1;visibility:visible;width:1280px;height:720px;border-radius:0;page-break-after:always;break-after:page;transition:none}
+  #ui,#prog,#notes{display:none!important}
+}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="stage"><div id="deck">
+
+<!-- 1 표지 -->
+<section class="slide cover" data-note="안녕하세요, TakeTheToken 팀입니다. 저희가 만든 서비스는 '다시 사는 대학생활'입니다. 인천대 송도캠퍼스를 그대로 옮긴 3D 캠퍼스에서, 대학 생활을 처음부터 다시 살아 보는 웹게임입니다.">
+  <div class="l">
+    <span class="badge">정보기술대학 공모전 · AI로 다시 쓰는 대학생활</span>
+    <h1>다시 사는<br><span>대학생활</span></h1>
+    <div class="sub">인생 2회차 캠퍼스 시뮬레이션</div>
+    <div class="team"><span class="pill">팀</span><b>TakeTheToken</b><span style="color:var(--muted)">· 2026. 11.</span></div>
+  </div>
+  <div class="r"><svg id="coverScene" viewBox="0 0 620 720" aria-hidden="true"></svg></div>
+</section>
+
+<!-- 2 문제 -->
+<section class="slide" data-note="대학 생활에는 연습이 없습니다. 처음엔 캠퍼스가 낯설고, 동아리나 대학원 같은 선택은 한 번 하면 되돌리기 어렵습니다. 그리고 학교가 어떻게 돌아가는지, 총장이나 교수 입장은 학생으로서는 알기 어렵습니다. 그래서 저희는 '한 번 미리 살아 볼 수 있다면'에서 출발했습니다.">
+  <p class="eyebrow">왜 만들었나</p>
+  <h2>대학생활에는 연습이 없다</h2>
+  <div class="probs">
+    <div class="prob"><span class="n">01</span><h3>캠퍼스가 낯설다</h3><p>어느 건물에서 무엇을 할 수 있는지 모른 채 첫 학기가 시작됩니다.</p></div>
+    <div class="prob"><span class="n">02</span><h3>선택을 미리 겪어 볼 수 없다</h3><p>동아리, 대학원, 취업 준비. 한 번 고르면 되돌리기 어려운 선택이 이어집니다.</p></div>
+    <div class="prob"><span class="n">03</span><h3>학교 안의 다른 입장을 모른다</h3><p>총장과 교수의 결정이 어떻게 내려지는지 학생은 겪어 볼 기회가 없습니다.</p></div>
+  </div>
+  <div class="punch">그렇다면, 대학생활을 <em>한 번 미리 살아 볼 수 있다면?</em></div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 3 아이디어 -->
+<section class="slide" data-note="저희 아이디어는 한 문장입니다. 실제 인천대 캠퍼스에서, 신입생부터 졸업과 대학원까지를 압축해서 다시 산다. 가운데에는 3D 캠퍼스와 생활 시뮬레이션이라는 본체가 있고, 그 위에 건물 이벤트, 인천대 거래소, 총장 시뮬레이터 같은 콘텐츠를 하나씩 얹는 구조입니다.">
+  <p class="eyebrow">아이디어</p>
+  <h2>실제 캠퍼스에서, 대학 4년을 다시 산다</h2>
+  <div class="idea">
+    <div>
+      <div class="quote">신입생부터 졸업, 대학원까지.<br><em>인천대 송도캠퍼스</em>를 걸으며<br>대학생활을 압축해서 다시 산다.</div>
+      <p class="lead" style="margin-top:24px">하나의 캠퍼스 위에 건물마다 다른 경험을 얹습니다. 팀원마다 콘텐츠를 만들어 본체에 붙이는 방식이라 계속 넓어집니다.</p>
+    </div>
+    <div class="orbit">
+      <svg viewBox="0 0 520 440" aria-hidden="true"><g stroke="#cfc3ad" stroke-width="2" stroke-dasharray="5 6" fill="none"><line x1="260" y1="220" x2="98" y2="70"/><line x1="260" y1="220" x2="430" y2="70"/><line x1="260" y1="220" x2="90" y2="372"/><line x1="260" y1="220" x2="438" y2="372"/></g></svg>
+      <div class="core">3D 캠퍼스<br>+ 생활 시뮬레이션<small>본체</small></div>
+      <div class="sat" style="left:0;top:40px">🏫<div>건물 이벤트<small>41곳</small></div></div>
+      <div class="sat" style="right:0;top:40px">📈<div>인천대 거래소<small>콘텐츠</small></div></div>
+      <div class="sat" style="left:0;bottom:40px">🏛️<div>총장 시뮬레이터<small>콘텐츠</small></div></div>
+      <div class="sat" style="right:0;bottom:40px;border-style:dashed;color:var(--muted)">＋<div>다음 콘텐츠<small>계속 추가</small></div></div>
+    </div>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 4 3D 캠퍼스 -->
+<section class="slide" data-note="이게 게임 화면입니다. 오픈스트리트맵의 실제 송도캠퍼스 지도 데이터를 브라우저에서 바로 읽어서 3D로 만듭니다. WASD로 걷고, 건물 문 앞에 서면 E 키로 들어갈 수 있습니다. 시간이 흐르면 낮과 밤이 바뀌고, 왼쪽 위 미니맵으로 위치를 확인합니다.">
+  <p class="eyebrow">본체 ① 3D 캠퍼스</p>
+  <h2>지도 데이터로 만든 진짜 송도캠퍼스</h2>
+  <div class="body">
+    <div class="screen" style="flex:1.45">
+      <svg class="scene" id="gameScene" viewBox="0 0 700 430" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+      <div class="hud">
+        <span class="logo">다시 사는 <b>대학생활</b></span>
+        <div class="sem"><b>1학년 1학기</b><span style="color:var(--muted)">1주차 / 16</span><div class="track"><i></i></div></div>
+        <div class="hs"><small>💰 돈</small><b>30</b></div>
+        <div class="hs"><small>❤️ 컨디션 <b>82</b></small><div class="bar"><i style="width:82%;background:var(--green)"></i></div></div>
+        <div class="hs"><small>📖 공부 <b>12</b></small><div class="bar"><i style="width:20%;background:var(--blue)"></i></div></div>
+        <div class="sp"><span>⏸</span><span>▶</span><span>▶▶</span></div>
+      </div>
+      <div class="mini"><i style="left:20px;top:24px;width:16px;height:12px"></i><i style="left:54px;top:18px;width:14px;height:18px"></i><i style="left:30px;top:58px;width:22px;height:10px;background:var(--roof-dorm)"></i><i style="left:62px;top:56px;width:12px;height:14px"></i><b></b></div>
+      <div class="clock">☀️ 낮 <span class="num">09:00</span></div>
+      <div class="right"><div class="tabs"><span>학생 평가</span><span class="on">대나무숲</span><span>테크트리</span></div>
+        <div class="post">오늘 학식 제육 나옴. 이번 학기 최고의 사건</div>
+        <div class="post">송도 바닷바람 때문에 우산 세 개째 뒤집힘</div>
+        <div class="post">기숙사에서 공대까지 걸어가면 수업 끝나 있음</div></div>
+      <div class="prompt"><kbd>E</kbd>학생회관 (17) 들어가기</div>
+      <div class="keys">WASD 이동 · Shift 달리기 · E 들어가기 · 드래그: 화면 돌리기 · 휠: 줌</div>
+    </div>
+    <div class="col" style="flex:.8;justify-content:center">
+      <ul class="bul">
+        <li><span class="ic">🗺️</span><div><b>실제 지도 그대로</b><span>OpenStreetMap 데이터를 브라우저에서 읽어 Three.js로 3D 건물을 짓습니다.</span></div></li>
+        <li><span class="ic">🚪</span><div><b>문 앞에서만 출입</b><span>WASD로 걷고, 건물 문 앞에서 E를 눌러 들어갑니다.</span></div></li>
+        <li><span class="ic">🌙</span><div><b>낮과 밤, 미니맵</b><span>시각에 따라 하늘과 창문 불빛이 바뀌고, 미니맵으로 위치를 봅니다.</span></div></li>
+      </ul>
+      <span class="tag-demo" style="align-self:flex-start">실제 게임 화면을 발표용으로 재현</span>
+    </div>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 5 이벤트 -->
+<section class="slide" data-note="건물에 들어가면 그 건물에서만 일어나는 이벤트가 나옵니다. 지금 41곳에 이벤트가 있고, 시간대마다 다른 이벤트가 뜹니다. 예를 들어 대학본부에서는 엘리베이터에서 총장님과 단둘이 마주치기도 합니다. 선택에 따라 스탯과 교수님, 동기, 선후배, 부모님 평판이 바뀌고, 어떤 선택은 대나무숲 게시글로 퍼집니다.">
+  <p class="eyebrow">본체 ② 생활 시뮬레이션</p>
+  <h2>건물마다, 시간마다 다른 하루</h2>
+  <div class="body">
+    <div class="col" style="flex:1.05">
+      <div class="modal">
+        <div class="place">🏛️ 대학본부 · ☀️ 낮</div>
+        <div class="em">🛗</div>
+        <h3>총장님과 엘리베이터</h3>
+        <p>엘리베이터 문이 닫히기 직전, 총장님이 탔다. 단둘이다.</p>
+        <div class="choice">밝게 인사한다 <small>👨‍🏫 교수님 +3 · 🤝 인맥 +2</small></div>
+        <div class="choice">휴대폰만 본다 <small>❤️ 컨디션 −2</small></div>
+        <div class="choice pick">등록금 얘기를 꺼낸다 <small>👥 동기 +5 · 👨‍🏫 −3</small></div>
+      </div>
+      <div class="bamboo"><div class="who">🎋 대나무숲 · 방금</div>오늘 본부 엘베에서 총장님한테 등록금 얘기한 용자 봄</div>
+    </div>
+    <div class="col" style="flex:.95">
+      <div class="stats">
+        <div class="stat"><b class="num">41</b><span>이벤트가 있는 건물<br>생활 15 · 단과대 15 · 주변 10 · 도서관</span></div>
+        <div class="stat"><b>5</b><span>시간대<br>새벽 · 아침 · 낮 · 저녁 · 밤</span></div>
+        <div class="stat"><b>3</b><span>동시에 들 수 있는 소속 활동<br>동아리 등, 매주 효과가 쌓임</span></div>
+        <div class="stat"><b>4</b><span>관계 평판<br>교수님 · 동기 · 선후배 · 부모님</span></div>
+      </div>
+      <div class="card" style="padding:16px 20px"><p>스탯 <b>공부 · 인맥 · 스펙 · 낭만 · 연구</b>와 돈, 컨디션을 관리하며 16주짜리 학기를 보냅니다.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 6 진로 -->
+<section class="slide" data-note="한 학기는 16주이고, 중간고사와 기말고사를 거쳐 학기마다 평점이 나옵니다. 장학금을 받기도 하고 학사경고를 받기도 합니다. 졸업하면 그동안 쌓은 스탯에 따라 진로가 갈립니다. 대학원에 가면 석사, 박사를 거쳐 교수 임용까지 갈 수 있습니다. 교수 엔딩 문구가 '드디어 주말에 잠깐 나올 수 있지를 말하는 쪽이 되었다'입니다.">
+  <p class="eyebrow">본체 ③ 학기와 진로</p>
+  <h2>한 학기씩 쌓여서, 다른 인생이 된다</h2>
+  <div class="flow">
+    <div class="st">16주 학기<small>중간 · 기말고사</small></div><span class="ar">→</span>
+    <div class="st">학기 정산<small>평점 · 장학금 · 학사경고</small></div><span class="ar">→</span>
+    <div class="st">졸업<small>쌓인 스탯과 평판</small></div><span class="ar">→</span>
+    <div class="st" style="background:var(--ink);color:var(--paper)">진로 테크트리<small style="color:#cfc6b8">조건에 따라 열림</small></div>
+  </div>
+  <div class="tree">
+    <div class="tier"><h4>학부 졸업 후</h4>
+      <div class="node">🏢 대기업 입사 <small>스펙 · 평점</small></div>
+      <div class="node">🚀 창업 <small>인맥 · 돈</small></div>
+      <div class="node next">🔬 대학원 진학 <small>연구 · 평점 · 교수님</small></div>
+      <div class="node">📚 공무원 준비 <small>조건 없음</small></div></div>
+    <div class="tier"><h4>석사</h4>
+      <div class="node next">🧑‍🔬 박사 진학 <small>논문 2편+</small></div>
+      <div class="node">🏭 연구소 연구원 <small>논문 1편+</small></div>
+      <div class="node">👔 석사 출신 취업 <small>조건 없음</small></div></div>
+    <div class="tier"><h4>박사</h4>
+      <div class="node">🏛️ 교수 임용 <small>논문 8편+</small></div>
+      <div class="node">🧬 기업 연구소 <small>논문 4편+</small></div>
+      <div class="node">✈️ 해외 포닥 <small>조건 없음</small></div></div>
+  </div>
+  <div class="ending"><b>🏛️ 엔딩: 교수님</b>드디어 "주말에 잠깐 나올 수 있지?"를 말하는 쪽이 되었다.</div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 7 거래소 -->
+<section class="slide" data-note="첫 번째 콘텐츠는 인천대 거래소입니다. 정보기술대학 교수님을 종목으로 보는 캠퍼스 증권 서비스입니다. 내 시간표의 학점이 곧 내 자산이 되고, 수업이 끝나면 가상 수강생들의 평가와 캠퍼스 공시가 생기면서 시세가 움직입니다. 캔들 차트에서 어떤 평가와 뉴스 때문에 가격이 움직였는지 원인까지 볼 수 있습니다.">
+  <p class="eyebrow">콘텐츠 ① 인천대 거래소</p>
+  <h2>교수님 종목, 내 시간표가 포트폴리오</h2>
+  <div class="body">
+    <div class="xch" style="flex:1.3;align-self:flex-start">
+      <div class="top">인천대 거래소 <i>시연 데이터</i><span style="margin-left:auto;font-weight:500;opacity:.85">11.6 (금) 13:20 · 유니코인</span></div>
+      <div class="idx">
+        <div><small>INU 종합</small><b class="num">101.84</b> <span class="up num">▲ 0.6%</span></div>
+        <div><small>컴퓨터공학부</small><b class="num">102.31</b> <span class="up num">▲ 0.9%</span></div>
+        <div><small>정보통신공학과</small><b class="num">100.72</b> <span class="up num">▲ 0.2%</span></div>
+        <div><small>임베디드시스템</small><b class="num">101.15</b> <span class="up num">▲ 0.4%</span></div>
+      </div>
+      <table>
+        <thead><tr><th>교수님</th><th>대표 강의</th><th class="r">현재가</th><th class="r">오늘</th><th class="r">한 줄 평</th></tr></thead>
+        <tbody>
+          <tr><td><b>김인수</b> <small style="color:var(--muted)">컴퓨터공학부</small></td><td>자연어처리</td><td class="r num">104.20</td><td class="r up num">▲ 1.8%</td><td class="r num">38</td></tr>
+          <tr><td><b>김우일</b> <small style="color:var(--muted)">컴퓨터공학부</small></td><td>컴퓨터구조</td><td class="r num">101.35</td><td class="r up num">▲ 0.7%</td><td class="r num">27</td></tr>
+          <tr><td><b>강승택</b> <small style="color:var(--muted)">정보통신공학과</small></td><td>전기자기학</td><td class="r num">100.90</td><td class="r up num">▲ 0.3%</td><td class="r num">22</td></tr>
+          <tr><td><b>강석훈</b> <small style="color:var(--muted)">임베디드시스템공학과</small></td><td>C언어프로그래밍(2)</td><td class="r num">102.05</td><td class="r up num">▲ 1.1%</td><td class="r num">31</td></tr>
+          <tr><td><b>원경호</b> <small style="color:var(--muted)">임베디드시스템공학과</small></td><td>아날로그회로및소자</td><td class="r num">100.40</td><td class="r up num">▲ 0.2%</td><td class="r num">19</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 12px;border-top:1px solid #efe9dd;display:flex;gap:10px;align-items:center"><svg id="candle" width="300" height="60" aria-hidden="true"></svg><span style="color:var(--muted)">💬 "예제를 조금 더 천천히 풀어주셨으면 좋겠어요"</span></div>
+    </div>
+    <div class="col" style="flex:.8;justify-content:center">
+      <ul class="bul">
+        <li><span class="ic">🧾</span><div><b>시간표 = 내 자산</b><span>강의 학점 × 담당 교수님 주가로 유니코인 자산을 계산합니다.</span></div></li>
+        <li><span class="ic">⏱️</span><div><b>수업이 끝나면 평가</b><span>종료된 강의마다 가상 수강생 12~36명의 평가와 한 줄 평이 생깁니다.</span></div></li>
+        <li><span class="ic">📰</span><div><b>캠퍼스 공시 56종</b><span>연구 과제, 학생 수상, 서버 장애 같은 사건이 시세를 움직입니다.</span></div></li>
+        <li><span class="ic">🕯️</span><div><b>원인이 보이는 차트</b><span>캔들마다 어떤 평가와 뉴스가 가격을 움직였는지 확인합니다.</span></div></li>
+      </ul>
+      <span class="tag-demo" style="align-self:flex-start">교수님·강의 정보: 2026-2 종합강의시간표 · 시세와 평가: 시연값</span>
+    </div>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 8 총장 시뮬레이터 -->
+<section class="slide" data-note="두 번째 콘텐츠는 총장 시뮬레이터입니다. 하루 동안 총장이 되어 학교에 올라온 안건을 결재합니다. 학식 가격, 도서관 좌석, 셔틀버스, 등록금, 그리고 생성형 AI 과제 정책까지 14개 안건 중 5개가 무작위로 올라옵니다. 결재하면 학생 페르소나들이 익명게시판에서 반응하고, 임기가 끝나면 학생회에 전달할 정책 제안서가 나옵니다.">
+  <p class="eyebrow">콘텐츠 ② 총장 시뮬레이터</p>
+  <h2>하루 동안 총장이 되어 결재한다</h2>
+  <div class="body">
+    <div class="pres" style="flex:1.3;align-self:flex-start">
+      <div class="gauges"><span>지지율<b class="num">59%</b></span><span>가용 예산<b class="num">18억</b></span><span>학업 평판<b class="num">62</b></span><span style="margin-left:auto">남은 안건 <b class="num">3/5</b></span></div>
+      <div class="doc">
+        <div class="t"><span>인천대학교 총장실 · 결재 문서</span><span>학사-2026-312</span></div>
+        <h4>과제에 생성형 AI 사용, 어디까지 허용할까</h4>
+        <div style="color:#5c6878">기안 부서 교무처 · 안건 3 / 5</div>
+        <div class="opt c"><b>가</b> 전면 허용, 프롬프트와 사용 내역 표기 의무화</div>
+        <div class="opt"><b>나</b> 과목별 교수 재량, 공지 의무화</div>
+        <div class="opt"><b>다</b> 과제에서 생성형 AI 전면 금지</div>
+        <div style="height:56px"></div>
+        <div class="seal">결재</div>
+      </div>
+      <div class="board"><b>캠퍼스 익명게시판</b>
+        <div class="p"><small>익명 · 공대 2</small><br>프롬프트 로그 제출이면 오히려 공부 됨 <span class="lk">공감 260</span></div>
+        <div class="p"><small>익명 · 자유전공 1</small><br>AI 잘 쓰는 것도 실력이니까 <span class="lk">공감 180</span></div>
+        <div class="p"><small>익명 · 4학년 취준</small><br>취업할 때 이 경험이 더 도움 될 듯 <span class="lk">공감 130</span></div>
+      </div>
+    </div>
+    <div class="col" style="flex:.8;justify-content:center">
+      <ul class="bul">
+        <li><span class="ic">🎲</span><div><b>14개 안건 중 5개</b><span>학식, 도서관, 셔틀, 등록금, AI 정책까지 매번 다른 안건이 올라옵니다.</span></div></li>
+        <li><span class="ic">⚖️</span><div><b>세 지표의 줄다리기</b><span>지지율, 예산, 학업 평판이 서로 부딪힙니다.</span></div></li>
+        <li><span class="ic">💬</span><div><b>학생 페르소나의 반응</b><span>자유전공 1학년, 통학 편입생, 4학년 취준생이 각자 반응합니다.</span></div></li>
+        <li><span class="ic">📝</span><div><b>정책 제안서 엔딩</b><span>임기가 끝나면 결정과 대표 의견을 학생회용 제안서로 정리합니다.</span></div></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 9 연결 -->
+<section class="slide" data-note="이 콘텐츠들은 따로 노는 게 아니라 하나의 캠퍼스로 연결합니다. 대학본부 건물에 들어가면 총장 시뮬레이터가, 정보기술대학 쪽에서는 인천대 거래소가 열리도록 통합하고 있습니다. 개발은 본체가 있는 Bae 브랜치를 기준으로, 팀원마다 자기 브랜치에서 콘텐츠를 만들어 Pull Request로 합치는 방식으로 분업하고 있습니다.">
+  <p class="eyebrow">구조</p>
+  <h2>건물에 들어가면, 콘텐츠가 열린다</h2>
+  <div class="links">
+    <div class="bld"><span class="e">🏛️</span><div>대학본부 (01)<small>3D 캠퍼스의 건물</small></div></div>
+    <div class="lk-ar">→</div>
+    <div class="cnt" style="background:#132a45">총장 시뮬레이터<small>SW 브랜치</small></div>
+    <div class="bld"><span class="e">💻</span><div>정보기술대학 (07)<small>3D 캠퍼스의 건물</small></div></div>
+    <div class="lk-ar">→</div>
+    <div class="cnt" style="background:#314590">인천대 거래소<small>GO 브랜치</small></div>
+    <div class="bld"><span class="e">🎸</span><div>학생회관 외 40곳<small>3D 캠퍼스의 건물</small></div></div>
+    <div class="lk-ar">→</div>
+    <div class="cnt" style="background:var(--lawn-d)">건물 이벤트 · 소속 활동<small>Bae 브랜치 (본체)</small></div>
+  </div>
+  <div class="branch">
+    <span class="pill">분업 방식</span>
+    <code>GO</code><span>·</span><code>SW</code><span>·</span><code>새 콘텐츠</code><span>— Pull Request →</span><code style="background:var(--ink);color:var(--paper);border-color:var(--ink)">Bae (기준)</code>
+    <span class="tag-demo">콘텐츠 진입 연결은 통합 작업 중</span>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 10 AI 활용 -->
+<section class="slide" data-note="AI는 Claude와 ChatGPT를 함께 썼습니다. 오른쪽은 총장 시뮬레이터를 만든 실제 프롬프트 기록입니다. 처음엔 실용적인 아이디어가 나왔는데 재미없다고 피드백했고, 다시 받은 아이디어도 와닿지 않는다고 했습니다. 그다음에 나온 콘셉트형 아이디어 중 총장 시뮬레이터를 골랐고, 안건을 늘려 무작위로 나오게 업그레이드했습니다. 이렇게 AI의 결과를 그대로 쓰지 않고, 피드백으로 방향을 바꿔 가며 만들었습니다.">
+  <p class="eyebrow">AI 활용</p>
+  <h2>AI와 주고받으며, 방향을 바꿔 가며 만들었다</h2>
+  <div class="tools"><span class="tool">Claude</span><span class="tool">ChatGPT</span></div>
+  <div class="body" style="margin-top:22px">
+    <div class="col" style="flex:.9">
+      <div class="uses">
+        <div class="use"><b>💡 아이디어 발산·평가</b><span>심사 기준을 주고 아이디어를 여러 번 다시 뽑아 비교</span></div>
+        <div class="use"><b>🧪 빠른 프로토타입</b><span>아이디어마다 바로 눌러 보는 데모를 만들어 팀이 함께 판단</span></div>
+        <div class="use"><b>✍️ 콘텐츠 대량 작성</b><span>안건, 선택지, 학생 반응처럼 양이 많은 문구 초안</span></div>
+        <div class="use"><b>📄 협업 문서화</b><span>브랜치 구조와 작업 흐름을 정리한 README</span></div>
+      </div>
+    </div>
+    <div class="col" style="flex:1.1">
+      <div class="card" style="padding:18px 20px">
+        <div style="font-size:14px;font-weight:700;color:var(--muted);margin-bottom:10px">프롬프트 로그 · 총장 시뮬레이터가 나오기까지</div>
+        <div class="log">
+          <div class="lg"><span class="v">v1</span><div><span class="q">주제에 맞고 심사에서 좋은 점수를 받을 아이디어를 생각해줘</span><div class="a">졸업요건 RPG, 전공 소개팅 등 <b>실용형 8개</b></div></div></div>
+          <div class="lg"><span class="v">v2</span><div><span class="q">재미없어</span><div class="a">학점 재판소, 시간표 관상 등 <b>재미 중심 6개</b></div></div></div>
+          <div class="lg"><span class="v">v3</span><div><span class="q">뭔가 빡하고 오지 않아. 창의적인 재미가 있을까?</span><div class="a">대학생 주식시장, <b>총장 시뮬레이터</b> 등 콘셉트형</div></div></div>
+          <div class="lg"><span class="v">v4</span><div><span class="q">총장 시뮬레이터의 안건을 더 추가해줄래? 몇 건이 랜덤하게 나오는 거지</span><div class="a">안건 5개 → <b>14개 중 무작위 5개</b>로 업그레이드</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 11 심사 기준 -->
+<section class="slide" data-note="심사 기준에 맞춰 정리하면 이렇습니다. 창의력에서는 실제 캠퍼스를 3D로 옮겨 대학생활을 다시 산다는 경험, 그리고 총장과 교수 종목처럼 역할을 뒤집는 콘텐츠를 보여드립니다. AI 활용은 방금 보신 프롬프트 기록처럼 피드백을 주고받은 과정입니다. 완성도는 지금 바로 보여드릴 실제로 돌아가는 서비스로 증명하겠습니다.">
+  <p class="eyebrow">심사 기준</p>
+  <h2>세 가지 기준에 이렇게 답합니다</h2>
+  <div class="crit">
+    <div class="cr"><div class="pt"><b>20</b><span>점</span></div><h3>창의력</h3><span class="k">아이디어의 참신성 · 학교 문제 해결성</span>
+      <ul><li>실제 송도캠퍼스를 걸으며 대학생활을 다시 사는 경험</li><li>총장, 교수 종목처럼 역할을 뒤집어 학교를 보는 콘텐츠</li><li>캠퍼스 적응, 진로 선택, 학교 운영 이해라는 실제 고민</li></ul></div>
+    <div class="cr"><div class="pt"><b>15</b><span>점</span></div><h3>AI 활용 능력</h3><span class="k">AI 툴 활용도 · 프롬프트 로그 우수성</span>
+      <ul><li>Claude, ChatGPT로 아이디어 발산부터 구현까지</li><li>결과를 그대로 쓰지 않고 피드백으로 방향 전환</li><li>버전별 프롬프트 로그로 과정을 기록</li></ul></div>
+    <div class="cr"><div class="pt"><b>15</b><span>점</span></div><h3>결과물 완성도</h3><span class="k">서비스 작동 여부 · 시연 명확성</span>
+      <ul><li>설치 없이 브라우저에서 바로 실행</li><li>3D 캠퍼스와 두 콘텐츠가 실제로 동작</li><li>한 번의 시연으로 본체와 콘텐츠를 모두 보여 주는 동선</li></ul></div>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+<!-- 12 시연 · 마무리 -->
+<section class="slide" data-note="이제 시연으로 보여드리겠습니다. 입학해서 캠퍼스를 걷고, 학생회관에서 이벤트를 겪은 다음, 대학본부에서 총장이 되고, 거래소에서 교수님 종목을 확인하는 순서입니다. 감사합니다.">
+  <div class="body" style="margin-top:0">
+    <div class="col" style="flex:1">
+      <p class="eyebrow">시연</p>
+      <h2>지금 바로, 다시 살아 봅니다</h2>
+      <div class="demo" style="margin-top:22px">
+        <div class="dm"><span class="n">1</span><div><b>입학하기</b><span>이름과 학과를 고르고 3D 캠퍼스에 들어갑니다</span></div></div>
+        <div class="dm"><span class="n">2</span><div><b>학생회관에서 하루</b><span>건물 이벤트와 대나무숲 반응을 봅니다</span></div></div>
+        <div class="dm"><span class="n">3</span><div><b>대학본부에서 총장 되기</b><span>안건 하나를 결재하고 학생 반응을 봅니다</span></div></div>
+        <div class="dm"><span class="n">4</span><div><b>거래소에서 교수님 종목</b><span>수업이 끝난 뒤 시세가 움직이는 걸 봅니다</span></div></div>
+      </div>
+    </div>
+    <div class="col" style="flex:.85;justify-content:center;padding-left:30px;border-left:2px solid var(--line)">
+      <div class="thanks">감사합니다<span>.</span></div>
+      <div style="font-size:22px;color:var(--muted);margin-top:12px">다시 사는 대학생활 · TakeTheToken</div>
+      <div class="members">
+        <div class="mb"><div class="blank"></div><span>3D 캠퍼스 본체 · 생활 시뮬레이션</span></div>
+        <div class="mb"><div class="blank"></div><span>인천대 거래소</span></div>
+        <div class="mb"><div class="blank"></div><span>총장 시뮬레이터</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>TakeTheToken</span><span class="pg"></span></div>
+</section>
+
+</div></div>
+
+<div id="notes" hidden><b>발표 메모</b><span id="noteText"></span></div>
+<div id="ui">
+  <button id="prev" aria-label="이전 슬라이드">◀</button>
+  <span id="count" class="num">1 / 12</span>
+  <button id="next" aria-label="다음 슬라이드">▶</button>
+  <button id="noteBtn">발표 메모 (N)</button>
+  <button id="fsBtn">전체 화면 (F)</button>
+  <span style="margin-left:auto">← → 이동 · N 메모 · F 전체 화면 · Ctrl+P로 PDF 저장</span>
+</div>
+
+<script>
+/* ---------- 아이소메트릭 캠퍼스 그리기 ---------- */
+const C = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function isoScene(svg, opt){
+  const NS="http://www.w3.org/2000/svg", s=opt.s, ox=opt.ox, oy=opt.oy;
+  const P=(x,y,z=0)=>[ox+(x-y)*0.866*s, oy+(x+y)*0.5*s - z*s];
+  const poly=(pts,fill,stroke)=>{ const p=document.createElementNS(NS,"polygon"); p.setAttribute("points",pts.map(q=>q.join(",")).join(" ")); p.setAttribute("fill",fill); if(stroke){p.setAttribute("stroke",stroke);p.setAttribute("stroke-width","1");} svg.appendChild(p); return p; };
+  const flat=(x,y,w,d,fill)=>poly([P(x,y),P(x+w,y),P(x+w,y+d),P(x,y+d)],fill);
+  // 땅
+  const g=opt.ground; poly([P(g[0],g[1]),P(g[0]+g[2],g[1]),P(g[0]+g[2],g[1]+g[3]),P(g[0],g[1]+g[3])],C("--lawn"));
+  poly([P(g[0],g[1]+g[3]),P(g[0]+g[2],g[1]+g[3]),P(g[0]+g[2],g[1]+g[3],-1.4),P(g[0],g[1]+g[3],-1.4)],"#a8794f");
+  poly([P(g[0]+g[2],g[1]),P(g[0]+g[2],g[1]+g[3]),P(g[0]+g[2],g[1]+g[3],-1.4),P(g[0]+g[2],g[1],-1.4)],"#8f6440");
+  (opt.paths||[]).forEach(p=>flat(...p,C("--path")));
+  (opt.water||[]).forEach(p=>flat(...p,"#6cb6ea"));
+  const items=[...(opt.blds||[]).map(b=>({t:"b",...b,k:b.x+b.y+b.w+b.d})),...(opt.trees||[]).map(t=>({t:"t",x:t[0],y:t[1],k:t[0]+t[1]+1})),...(opt.me?[{t:"m",x:opt.me[0],y:opt.me[1],k:opt.me[0]+opt.me[1]+.5}]:[])];
+  items.sort((a,b)=>a.k-b.k);
+  items.forEach(it=>{
+    if(it.t==="b"){ const {x,y,w,d,h,roof}=it;
+      poly([P(x,y+d),P(x+w,y+d),P(x+w,y+d,h),P(x,y+d,h)],C("--wall"),"#e0d6c4");
+      poly([P(x+w,y),P(x+w,y+d),P(x+w,y+d,h),P(x+w,y,h)],C("--wall-d"),"#d6ccb8");
+      // 창문 줄
+      for(let lv=1; lv<h; lv+=1.1){ for(let i=0.5;i<w-0.3;i+=1.1){ poly([P(x+i,y+d,lv),P(x+i+0.5,y+d,lv),P(x+i+0.5,y+d,lv+0.5),P(x+i,y+d,lv+0.5)],"#bfe0f0"); } }
+      poly([P(x,y,h),P(x+w,y,h),P(x+w,y+d,h),P(x,y+d,h)],roof);
+      if(it.door){ poly([P(x+w/2-0.4,y+d,0),P(x+w/2+0.4,y+d,0),P(x+w/2+0.4,y+d,1),P(x+w/2-0.4,y+d,1)],"#4a7bd0"); }
+    } else if(it.t==="t"){ const [bx,by]=P(it.x,it.y); const NSel=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);svg.appendChild(e);};
+      NSel("rect",{x:bx-1.5,y:by-s*0.9,width:3,height:s*0.9,fill:"#8a6a4a"}); NSel("circle",{cx:bx,cy:by-s*1.3,r:s*0.7,fill:"#5aa64e"}); NSel("circle",{cx:bx-s*0.25,cy:by-s*1.5,r:s*0.4,fill:"#79bd5a"});
+    } else { const [bx,by]=P(it.x,it.y); const e1=document.createElementNS(NS,"ellipse"); e1.setAttribute("cx",bx);e1.setAttribute("cy",by);e1.setAttribute("rx",s*0.5);e1.setAttribute("ry",s*0.25);e1.setAttribute("fill","rgba(0,0,0,.2)");svg.appendChild(e1);
+      const c=document.createElementNS(NS,"circle"); c.setAttribute("cx",bx);c.setAttribute("cy",by-s*0.9);c.setAttribute("r",s*0.45);c.setAttribute("fill",C("--accent"));c.setAttribute("stroke","#fff");c.setAttribute("stroke-width","2");svg.appendChild(c); }
+  });
+}
+const R=()=>C("--roof-univ"), D=()=>C("--roof-dorm");
+isoScene(document.getElementById("coverScene"),{s:22,ox:300,oy:250,ground:[0,0,16,16],
+  paths:[[0,7,16,1.4],[7.2,0,1.4,16]],water:[[11,11,4,4]],
+  blds:[{x:1,y:1,w:5,d:4,h:4,roof:R(),door:1},{x:9.5,y:1,w:5,d:3,h:6,roof:R()},{x:1,y:9.5,w:3,d:5,h:3,roof:D()},{x:4.6,y:10,w:2,d:4,h:3,roof:D()},{x:9.5,y:5,w:3,d:1.4,h:2,roof:C("--roof-biz")}],
+  trees:[[6.5,5.5],[0.6,6.3],[14.5,5.6],[9,9.5],[9.6,13.5],[3,15]],me:[7.9,8.5]});
+isoScene(document.getElementById("gameScene"),{s:20,ox:330,oy:110,ground:[-2,-2,22,18],
+  paths:[[-2,8,22,1.6],[8,-2,1.6,18]],
+  blds:[{x:0,y:0,w:6,d:5,h:3.5,roof:R(),door:1},{x:11,y:0,w:6,d:4,h:5.5,roof:R()},{x:0,y:11,w:4,d:4,h:2.6,roof:D()},{x:11,y:11,w:5,d:3,h:3,roof:R()},{x:5,y:11.5,w:2,d:2.5,h:2,roof:C("--roof-biz")}],
+  trees:[[7,6],[10,6.5],[-1,6],[17.5,6],[7,13],[10,15],[1,17]],me:[3,6.6]});
+
+/* 캔들 */
+(function(){ const svg=document.getElementById("candle"), NS="http://www.w3.org/2000/svg";
+  let p=100; const pts=[]; let seed=7; const rnd=()=>{seed=(seed*9301+49297)%233280; return seed/233280;};
+  for(let i=0;i<24;i++){ const o=p, c=o+(rnd()-0.42)*1.2, h=Math.max(o,c)+rnd()*0.5, l=Math.min(o,c)-rnd()*0.5; pts.push([o,h,l,c]); p=c; }
+  const lo=Math.min(...pts.map(q=>q[2])), hi=Math.max(...pts.map(q=>q[1])), y=v=>4+(1-(v-lo)/(hi-lo))*52;
+  pts.forEach((q,i)=>{ const x=6+i*12, up=q[3]>=q[0], col=up?"#d9534f":"#4a7bd0";
+    const ln=document.createElementNS(NS,"line"); ln.setAttribute("x1",x+3);ln.setAttribute("x2",x+3);ln.setAttribute("y1",y(q[1]));ln.setAttribute("y2",y(q[2]));ln.setAttribute("stroke",col);svg.appendChild(ln);
+    const r=document.createElementNS(NS,"rect"); r.setAttribute("x",x);r.setAttribute("width",6);r.setAttribute("y",y(Math.max(q[0],q[3])));r.setAttribute("height",Math.max(1.5,Math.abs(y(q[0])-y(q[3]))));r.setAttribute("fill",col);svg.appendChild(r); });
+})();
+
+/* ---------- 슬라이드 조작 ---------- */
+const slides=[...document.querySelectorAll(".slide")], deck=document.getElementById("deck");
+let cur=0, notesOn=false;
+slides.forEach((s,i)=>{ const pg=s.querySelector(".pg"); if(pg) pg.textContent=`${i+1} / ${slides.length}`; });
+function fit(){ const k=Math.min(innerWidth/1280, innerHeight/720)*0.98; deck.style.transform=`scale(${k})`; }
+function go(n){
+  cur=Math.max(0,Math.min(slides.length-1,n));
+  slides.forEach((s,i)=>s.classList.toggle("on",i===cur));
+  document.getElementById("count").textContent=`${cur+1} / ${slides.length}`;
+  document.getElementById("prog").style.width=`${(cur+1)/slides.length*100}%`;
+  document.getElementById("noteText").textContent=slides[cur].dataset.note||"";
+  try{ history.replaceState(null,"","#"+(cur+1)); }catch(e){}
+}
+function toggleNotes(){ notesOn=!notesOn; document.getElementById("notes").hidden=!notesOn; }
+function fullscreen(){ const d=document.documentElement; if(!document.fullscreenElement){ d.requestFullscreen&&d.requestFullscreen().catch(()=>{}); } else document.exitFullscreen(); }
+addEventListener("keydown",e=>{
+  if(["ArrowRight","PageDown"," ","Enter"].includes(e.key)){ e.preventDefault(); go(cur+1); }
+  else if(["ArrowLeft","PageUp","Backspace"].includes(e.key)){ e.preventDefault(); go(cur-1); }
+  else if(e.key==="Home") go(0); else if(e.key==="End") go(slides.length-1);
+  else if(e.key==="n"||e.key==="N") toggleNotes(); else if(e.key==="f"||e.key==="F") fullscreen();
+});
+document.getElementById("prev").onclick=()=>go(cur-1);
+document.getElementById("next").onclick=()=>go(cur+1);
+document.getElementById("noteBtn").onclick=toggleNotes;
+document.getElementById("fsBtn").onclick=fullscreen;
+document.getElementById("stage").addEventListener("click",e=>{ if(e.target.closest("button")) return; e.clientX>innerWidth/2?go(cur+1):go(cur-1); });
+let tx=null; addEventListener("touchstart",e=>tx=e.touches[0].clientX,{passive:true});
+addEventListener("touchend",e=>{ if(tx==null) return; const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>50) go(cur+(dx<0?1:-1)); tx=null; });
+addEventListener("resize",fit);
+fit(); go(Math.max(0,(parseInt(location.hash.slice(1))||1)-1));
+</script>
+</body>
+</html>
