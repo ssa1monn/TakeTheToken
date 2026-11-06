@@ -140,6 +140,18 @@ renderer.domElement.addEventListener('pointerup', e => {
   info.style.display = 'block';
 });
 
+// 콘솔 디버그용: __view.look([x, y], dist, yaw도) — 지도 좌표 [x, y] 를 바라보기
+window.__view = {
+  camera, controls, renderer, get buildings() { return buildings; },
+  look([x, y], dist = 160, yawDeg = 45, pitchDeg = 35) {
+    const yaw = yawDeg * Math.PI / 180, p = pitchDeg * Math.PI / 180;
+    controls.target.set(x, 0, -y);
+    camera.position.set(x + dist * Math.cos(p) * Math.sin(yaw), dist * Math.sin(p), -y + dist * Math.cos(p) * Math.cos(yaw));
+    controls.update();
+  },
+  find(name) { const b = buildings.find(m => m.userData.name.includes(name)); return b && b.userData.poly && b.userData.poly.reduce((a, q) => [a[0] + q[0] / b.userData.poly.length, a[1] + q[1] / b.userData.poly.length], [0, 0]); },
+};
+
 function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 addEventListener('resize', () => {

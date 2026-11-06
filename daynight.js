@@ -29,9 +29,8 @@ export function nightFactor(h) {
 export function createDayNight({ scene, sun, hemi, campus, follow }) {
   // 건물 창문: builder가 준비한 emissiveMap을 붙인다
   const walls = [];
-  for (const b of campus.buildings) {
-    const m = [b.material].flat()[0];
-    if (!m.userData.lit) continue;
+  for (const b of campus.buildings) for (const m of [b.material].flat()) {
+    if (!m.userData.lit) continue;          // 외장 재질마다 불 켜진 창 텍스처가 따로 있다
     m.emissiveMap = m.userData.lit;
     m.emissive.set(WINDOW_GLOW);
     m.emissiveIntensity = 0;
