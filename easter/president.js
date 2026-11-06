@@ -2,11 +2,11 @@
 // 이스터에그: 대학본부 총장실 → 총장 시뮬레이터 (easter/president.html, 원작 SW 브랜치)
 // (places/helpers.js 다음, game.js 전에 로드)
 //
-//   대학본부에 들어갈 때 가끔 "총장실 문이 열려 있다"가 뜬다 — 퇴근 시간(17시~)에 더 잘 열린다
+//   대학본부에 들어갈 때 가끔 "총장실 문이 열려 있다"가 뜬다 — 퇴근 무렵(16시~)에 더 잘 열린다
 //   학기에 한 번. 총장 의자에 앉으면 시뮬레이터가 iframe으로 열리고, 임기 결과에 따라 보상
 // ───────────────────────────────────────────────
 const PRESIDENT_PLACE = 'hq';
-const PRESIDENT_CHANCE = h => (h >= 17 ? 0.5 : 0.12);
+const PRESIDENT_CHANCE = h => (h >= 16 ? 0.7 : 0.3);   // 퇴근 무렵(16~18시) 70%, 그 외 30%
 
 // 판정(시뮬레이터 verdict) → 게임 보상
 const PRESIDENT_REWARDS = {
@@ -67,6 +67,6 @@ function openPresidentRoom() {
 
 // 대나무숲 힌트
 POST_TEMPLATES.push(
-  { when: s => s.stage === 'ug' && !s.counters.president, text: '대학본부 총장실 퇴근 시간 지나면 문 열어 두고 간다던데 진짜임?' },
+  { when: s => s.stage === 'ug' && !s.counters.president, text: '대학본부 총장실 오후 4시 넘으면 문 열어 두고 간다던데 진짜임?' },
   { when: s => !!s.counters.president, text: '총장실 의자 앉아 본 사람? 생각보다 푹신하다던데' },
 );
