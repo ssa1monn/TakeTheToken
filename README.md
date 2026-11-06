@@ -23,8 +23,8 @@ flowchart LR
 | 브랜치 | 담당 | 내용 | 상태 |
 | --- | --- | --- | --- |
 | [`Bae`](https://github.com/ssa1monn/TakeTheToken/tree/Bae) | oi-RYH | 다시 사는 대학생활: 3D 캠퍼스 웹게임 본체 | 기준 브랜치 |
-| [`GO`](https://github.com/ssa1monn/TakeTheToken/tree/GO) | 고우석 | 인천대 거래소: 교수님 주가 중심 캠퍼스 증권 데모 | `Bae` 통합 전 |
-| [`SW`](https://github.com/ssa1monn/TakeTheToken/tree/SW) | 박상원 | 총장 시뮬레이터: 학교 안건을 결재하는 웹 데모 | `Bae` 통합 전 |
+| [`GO`](https://github.com/ssa1monn/TakeTheToken/tree/GO) | 고우석 | 인천대 거래소: 교수님 주가 중심 캠퍼스 증권 데모 | `Bae`에 통합됨 (게임 속 휴대폰 앱) |
+| [`SW`](https://github.com/ssa1monn/TakeTheToken/tree/SW) | 박상원 | 총장 시뮬레이터: 학교 안건을 결재하는 웹 데모 | `Bae`에 통합됨 (대학본부 총장실 이스터에그) |
 | `main` | 공동 | 저장소 안내 문서(README)만 둡니다 | 코드는 올리지 않음 |
 
 ---
@@ -87,26 +87,27 @@ addPlace('hq', { match: '대학본부 (01)', emoji: '🏛️', name: '대학본�
 
 ### 2. 큰 콘텐츠: 독립 미니게임으로 추가
 
-총장 시뮬레이터나 인천대 거래소처럼 화면이 따로 있는 콘텐츠는 **폴더째 넣고 건물에서 들어가게** 합니다.
+총장 시뮬레이터나 인천대 거래소처럼 화면이 따로 있는 콘텐츠는 **폴더째 넣고 게임 안에서 iframe으로 띄웁니다.**
 
 ```
-contents/
-  president-sim/     ← SW: 총장 시뮬레이터
-  exchange/          ← GO: 인천대 거래소
+easter/
+  president.html     ← SW: 총장 시뮬레이터 (원본 + 나가기 버튼 · 결과 전달)
+  president.js       ← 대학본부에서 총장실 이벤트 → 시뮬레이터 열기 → 판정별 보상
+phone/
+  exchange/          ← GO: 인천대 거래소 (GO의 dist/ · tests/ · docs/ 그대로)
+  phone.js, phone.css← 화면 왼쪽 작은 휴대폰 → 누르면 가로로 커지며 거래소 앱이 열림
 ```
 
-- 각 콘텐츠는 자기 폴더 안에서만 동작하게 만들고, 본체 파일(`game.js`, `world.js`)은 진입 연결 부분만 고칩니다.
-- 진입은 해당 건물 이벤트의 선택지에서 콘텐츠 화면을 여는 방식으로 연결합니다.
-- 콘텐츠 폴더 구조와 진입 방식은 첫 통합 PR에서 확정하고, 확정되면 이 문서를 고칩니다.
+- 각 콘텐츠는 자기 폴더 안에서만 동작하고, 본체 파일(`game.js`, `index.html`)은 진입 연결 몇 줄만 고칩니다.
+- 콘텐츠가 열려 있는 동안 게임 시간은 멈춥니다(`pushModal`). 결과는 같은 출처 `postMessage`나 부모의 `window.Game` API로 주고받습니다.
+- 거래소는 `window.Game.exchangeClock()`으로 게임 날짜·시각·세이브 ID를 읽어 게임 시계를 따라갑니다 (`phone/exchange/docs/game-clock-integration.md`).
 
 ### 콘텐츠 연결 계획
 
-| 콘텐츠 | 브랜치 | 진입 건물 (제안) | 상태 |
+| 콘텐츠 | 브랜치 | 진입 방법 | 상태 |
 | --- | --- | --- | --- |
-| 총장 시뮬레이터 | `SW` | 대학본부 (01) | 통합 전 |
-| 인천대 거래소 | `GO` | 정보기술대학 (07) 또는 교수회관 (02) | 통합 전 |
-
-진입 건물과 `contents/` 폴더 구조는 아직 제안 단계입니다. 팀 회의에서 정하면 이 문서를 고쳐 주세요.
+| 총장 시뮬레이터 | `SW` | 대학본부 (01)에 들어갈 때 학기에 한 번 "총장실 문이 열려 있다" (낮 30%, 16시 이후 70%) | 통합됨 |
+| 인천대 거래소 | `GO` | 화면 왼쪽 시계 아래 작은 휴대폰 | 통합됨 |
 
 ---
 
@@ -131,7 +132,7 @@ contents/
 
 ### `SW` 총장 시뮬레이터
 
-하루 동안 총장이 되어 학교 안건을 결재하는 데모입니다. 안건 14개 중 5개가 무작위로 올라오고, 결정에 따라 지지율·예산·학업 평판이 바뀝니다. AI 학생 페르소나들이 익명게시판에서 반응하고, 임기가 끝나면 학생회에 전달할 정책 제안서가 나옵니다. 지금 데모의 학생 반응은 미리 써 둔 문장이며, LLM으로 생성하도록 바꿀 예정입니다. 파일 하나(`president-simulator.html`)로 동작합니다.
+하루 동안 총장이 되어 학교 안건을 결재하는 데모입니다. 안건 14개 중 5개가 무작위로 올라오고, 결정에 따라 지지율·예산·학업 평판이 바뀝니다. AI 학생 페르소나들이 익명게시판에서 반응하고, 임기가 끝나면 학생회에 전달할 정책 제안서가 나옵니다. 지금 데모의 학생 반응은 미리 써 둔 문장이며, LLM으로 생성하도록 바꿀 예정입니다. 파일 하나로 동작하며, 게임에서는 `easter/president.html`로 들어가 있습니다.
 
 ---
 
@@ -143,10 +144,10 @@ contents/
 | --- | --- | --- |
 | 다시 사는 대학생활 (`Bae`) | 저장소 루트에서 `python -m http.server 8123` (Windows에서 안 되면 `py -m http.server 8123`) | http://localhost:8123 |
 | 캠퍼스 3D 맵 뷰어 (`Bae`) | 위와 같은 서버 | http://localhost:8123/map3d.html |
-| 인천대 거래소 (`GO`) | 저장소 루트에서 `node server.mjs` | http://127.0.0.1:4173 |
-| 총장 시뮬레이터 (`SW`) | `president-simulator.html`을 브라우저로 열기 (서버 필요 없음) | 파일 경로 |
+| 인천대 거래소 단독 실행 | `phone/exchange/`에서 `node server.mjs` | http://127.0.0.1:4173 |
+| 총장 시뮬레이터 단독 실행 | `easter/president.html`을 브라우저로 열기 (서버 필요 없음) | 파일 경로 |
 
-인천대 거래소 테스트는 `node --test tests/*.test.mjs`로 돌립니다.
+인천대 거래소 테스트는 `phone/exchange/`에서 `node --test tests/*.test.mjs`로 돌립니다.
 
 ---
 
@@ -163,6 +164,10 @@ contents/
 | `assets/map/campus.osm` | 송도캠퍼스 지도 데이터 |
 | `places/` | 건물 이벤트 (`helpers.js`, `campus.js`, `academic.js`, `town.js`) |
 | `activities.js`, `relations.js` | 소속 활동, 관계 이벤트 |
+| `decay.js`, `sleep.js` | 관계가 시간이 지나면 멀어짐 · 컨디션 소모, 내 방(제1기숙사) 잠자기 |
+| `cutscenes.js`, `assets/cutscenes/` | 이벤트 컷신 (학산도서관 · 정보대 7호관, WebP) |
+| `phone/` | 휴대폰 UI와 인천대 거래소 (`GO`) |
+| `easter/` | 대학본부 총장실 이스터에그 · 총장 시뮬레이터 (`SW`) |
 | `map3d.html`, `map3d.js` | 캠퍼스 3D 맵 뷰어 |
 | `legacy/2d-prototype/` | 초기 2D 프로토타입 |
 

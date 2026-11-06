@@ -52,6 +52,7 @@ function newState(name, majorId) {
   const s = {
     name: name || '새내기', major: majorId, hakbun: 26,
     stage: 'ug', stageSem: 1, week: 1, weekT: 0,
+    exchangeSessionId: crypto.randomUUID(), exchangeDay: 0,
     money: 30, cond: 80,
     stats: { social: 0, spec: 0, romance: 0, research: 0 },
     semStudy: 0, studyBonus: 0, stageResearch: 0,
@@ -169,7 +170,7 @@ function update(dt) {
   if (!timeRunning()) return;
   S.weekT += dt * speed / WEEK_SECONDS;
   drainCondition(S, dt * speed / WEEK_SECONDS);   // decay.js: 깨어 있는 동안 컨디션이 닳는다
-  if (S.weekT >= 1) { S.weekT = 0; weekStep(); }
+  if (S.weekT >= 1) { S.exchangeDay++; S.weekT = 0; weekStep(); }
   else { maybeTimedEvent(S); relationTick(S); }   // relationTick: relations.js (부모님 정기 연락)
   renderWeekBar();
   renderClock();
@@ -685,6 +686,13 @@ function initStart() {
 }
 
 function startGame() {
+  // Older saves receive an ID once; the ID and day survive save/load.
+  S.exchangeSessionId ||= crypto.randomUUID();
+  if (!Number.isInteger(S.exchangeDay)) {
+    const pastStages = S.gpas.filter(g => g.stage !== S.stage).length;
+    S.exchangeDay = (pastStages + Math.max(0, S.stageSem - 1)) * WEEKS + Math.max(0, S.week - 1);
+  }
+  save();
   $('#start').classList.add('hidden');
   $('#game').classList.remove('hidden');
   renderAll();
@@ -704,7 +712,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── 3D 월드(world.js)와의 연결
+function exchangeClock() {
+  if (!S) return null;
+  const elapsed = S.exchangeDay * 1440 + DAY_START * 60 + Math.floor(S.weekT * 1440);
+  const value = new Date(Date.UTC(2026, 10, 6) + elapsed * 60000);
+  return {
+    sessionId: S.exchangeSessionId, date: value.toISOString().slice(0, 10),
+    minute: value.getUTCHours() * 60 + value.getUTCMinutes(),
+    active: !S.ending, paused: !timeRunning(),
+  };
+}
+
 window.Game = {
+  exchangeClock,
   update,
   enterBuilding,
   placeStatus,
