@@ -57,6 +57,7 @@ function openPhone() {
   if (phoneOpen || !window.Game?.isActive() || window.Game.inputBlocked()) return;
   pushModal(() => {                                  // 게임 모달 큐 안에서 열기 → 시간이 멈춘다
     document.getElementById('modal').classList.add('hidden');
+    save();
     if (!phoneEl) buildPhone();
     phoneOpen = true;
     phoneEl.querySelector('.pr-time').textContent = clockNow();
@@ -72,6 +73,7 @@ function closePhone() {
   phoneOpen = false;
   phoneEl.classList.remove('show');
   document.getElementById('phone-mini').classList.remove('away');
+  save();
   nextModal();
 }
 

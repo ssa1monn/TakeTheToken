@@ -23,7 +23,9 @@ function atMinute(absolute) {
 export function normalizeGameClock(value) {
   if (!value || value.active === false) return null;
   if (!validClock(value) || typeof value.sessionId !== 'string' || !value.sessionId.trim() || value.sessionId.length > 128) return null;
-  return { sessionId: value.sessionId, date: value.date, minute: value.minute, active: true, paused: value.paused === true };
+  if (value.startedAt !== undefined && (!validClock(value.startedAt) || dateNumber(value.startedAt.date) + value.startedAt.minute > dateNumber(value.date) + value.minute)) return null;
+  const startedAt = value.startedAt === undefined ? {} : { startedAt: { date: value.startedAt.date, minute: value.startedAt.minute } };
+  return { sessionId: value.sessionId, date: value.date, minute: value.minute, active: true, paused: value.paused === true, ...startedAt };
 }
 
 export function gameStorageKey(snapshot) {
@@ -53,7 +55,7 @@ export function createGameClockReader(browserWindow, { baseDate = BASE_DATE, leg
 
   function read() {
     const game = hostGame();
-    wasConnected = !!game;
+    if (game) wasConnected = true;
     if (!game) return null;
     try {
       if (!game.isActive()) return { active: false, source: typeof game.exchangeClock === 'function' ? 'bae' : 'legacy' };
@@ -78,8 +80,9 @@ export function createGameClockReader(browserWindow, { baseDate = BASE_DATE, leg
 
 /**
  * Apply elapsed host time, rather than wall-clock time. Duplicate snapshots never
- * run the market again. A rewind/new save is reported before any state mutation
- * so the caller can select a separate saved state or rebuild its own timeline.
+ * run the market again. Only a different character requests another namespace.
+ * Older clock snapshots are ignored; long gaps retain the market and settle the
+ * destination without replaying an unbounded number of absent observations.
  */
 export function applyGameClock(state, catalog, input, { process, maxCatchUpDays = 7 } = {}) {
   const snapshot = normalizeGameClock(input);
@@ -90,8 +93,8 @@ export function applyGameClock(state, catalog, input, { process, maxCatchUpDays 
   const current = validClock(previous) ? dateNumber(previous.date) + previous.minute : null;
   const reset = reason => ({ changed: false, resetRequired: true, reason, steps: 0 });
   if (current !== null && previous.sessionId !== snapshot.sessionId) return reset('different-session');
-  if (current !== null && target < current) return reset('rewind');
-  if (current !== null && target - current > maxCatchUpDays * DAY_MINUTES) return reset('large-jump');
+  if (current !== null && target < current) return { changed: false, resetRequired: false, reason: 'rewind-ignored', ignored: true, steps: 0 };
+  const largeJump = current !== null && target - current > maxCatchUpDays * DAY_MINUTES;
   if (current === target) {
     const changed = state.gameClock.paused !== snapshot.paused;
     state.gameClock = { ...snapshot };
@@ -108,7 +111,7 @@ export function applyGameClock(state, catalog, input, { process, maxCatchUpDays 
     steps++;
   }
 
-  if (current === null) run(target);
+  if (current === null || largeJump) run(target);
   else {
     // 10-minute samples preserve price/news movement through background gaps;
     // exact final class ends and day ends ensure no eligible class is missed.
@@ -127,5 +130,5 @@ export function applyGameClock(state, catalog, input, { process, maxCatchUpDays 
     }
     for (const tick of [...ticks].sort((a, b) => a - b)) run(tick);
   }
-  return { changed: true, resetRequired: false, reason: current === null ? 'first-sync' : 'advanced', steps };
+  return { changed: true, resetRequired: false, reason: current === null ? 'first-sync' : largeJump ? 'advanced-gap' : 'advanced', steps };
 }

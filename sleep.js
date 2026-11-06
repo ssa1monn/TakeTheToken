@@ -18,7 +18,7 @@ function hoursUntilWake(h) { return (WAKE_HOUR - h + 24) % 24 || 24; }
 // 시간을 건너뛴다 (06:00을 넘으면 그 주(=하루) 정산을 한 번 돌린다)
 function advanceHours(s, hrs) {
   let t = s.weekT + hrs / 24;
-  if (t >= 1) { s.exchangeDay = (s.exchangeDay || 0) + 1; s.weekT = 0; weekStep(); t -= 1; }   // 거래소 날짜도 하루 넘김
+  if (t >= 1) { s.weekT = 0; weekStep(); t -= 1; }   // weekStep에서 거래소 날짜도 하루 넘김
   s.weekT = Math.min(0.999, t);
   renderAll();
 }

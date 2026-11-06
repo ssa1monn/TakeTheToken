@@ -170,7 +170,7 @@ function update(dt) {
   if (!timeRunning()) return;
   S.weekT += dt * speed / WEEK_SECONDS;
   drainCondition(S, dt * speed / WEEK_SECONDS);   // decay.js: 깨어 있는 동안 컨디션이 닳는다
-  if (S.weekT >= 1) { S.exchangeDay++; S.weekT = 0; weekStep(); }
+  if (S.weekT >= 1) { S.weekT = 0; weekStep(); }
   else { maybeTimedEvent(S); relationTick(S); }   // relationTick: relations.js (부모님 정기 연락)
   renderWeekBar();
   renderClock();
@@ -192,6 +192,8 @@ function maybeTimedEvent(s) {
 
 function weekStep() {
   const s = S;
+  // Both the normal clock and sleeping advance through this boundary.
+  s.exchangeDay = (s.exchangeDay ?? 0) + 1;
   if (s.burnout > 0) {
     s.burnout--;
     s.cond = clamp(s.cond + 15);
@@ -687,11 +689,11 @@ function initStart() {
 }
 
 function startGame() {
-  // Older saves receive an ID once; the ID and day survive save/load.
-  S.exchangeSessionId ||= crypto.randomUUID();
-  if (!Number.isInteger(S.exchangeDay)) {
-    const pastStages = S.gpas.filter(g => g.stage !== S.stage).length;
-    S.exchangeDay = (pastStages + Math.max(0, S.stageSem - 1)) * WEEKS + Math.max(0, S.week - 1);
+  // Upgrade old saves once. Reopening the phone or continuing never changes this ID.
+  if (typeof S.exchangeSessionId !== 'string' || !S.exchangeSessionId) S.exchangeSessionId = crypto.randomUUID();
+  if (!Number.isInteger(S.exchangeDay) || S.exchangeDay < 0) {
+    const previousStages = S.gpas.filter(g => g.stage !== S.stage).length;
+    S.exchangeDay = (previousStages + Math.max(0, S.stageSem - 1)) * WEEKS + Math.max(0, S.week - 1);
   }
   save();
   $('#start').classList.add('hidden');
@@ -718,11 +720,16 @@ function exchangeClock() {
   const elapsed = S.exchangeDay * 1440 + DAY_START * 60 + Math.floor(S.weekT * 1440);
   const value = new Date(Date.UTC(2026, 10, 6) + elapsed * 60000);
   return {
-    sessionId: S.exchangeSessionId, date: value.toISOString().slice(0, 10),
+    sessionId: S.exchangeSessionId,
+    startedAt: { date: '2026-11-06', minute: DAY_START * 60 },
+    date: value.toISOString().slice(0, 10),
     minute: value.getUTCHours() * 60 + value.getUTCMinutes(),
     active: !S.ending, paused: !timeRunning(),
   };
 }
+
+// Keep the game checkpoint aligned with the exchange when continuing after reload.
+window.addEventListener('pagehide', () => { if (S && !S.ending) save(); });
 
 window.Game = {
   exchangeClock,

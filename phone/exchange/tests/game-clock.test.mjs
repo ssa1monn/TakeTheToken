@@ -17,6 +17,15 @@ test('game snapshots reject invalid dates, precision, session IDs and inactive h
   assert.equal(gameStorageKey(snap(900, {sessionId:'test/a'})), 'inu-exchange-game-v1:test%2Fa');
 });
 
+test('an optional character creation clock must be valid and cannot follow the current clock', () => {
+  const startedAt = { date: '2026-11-06', minute: 360 };
+  assert.deepEqual(normalizeGameClock(snap(885, { startedAt })), snap(885, { startedAt }));
+  assert.deepEqual(normalizeGameClock(snap(360, { startedAt })), snap(360, { startedAt }));
+  for (const invalid of [null, {}, { date:'2026-02-30',minute:0 }, { date:'2026-11-06',minute:-1 }, { date:'2026-11-06',minute:885.5 }, { date:'2026-11-06',minute:886 }, { date:'2026-11-07',minute:0 }]) {
+    assert.equal(normalizeGameClock(snap(885, { startedAt: invalid })), null);
+  }
+});
+
 test('reader uses only the immediate same-origin parent and never reads foreign or self hosts', () => {
   let calls = 0;
   const window = windowWith({ isActive: () => true, exchangeClock: () => { calls++; return snap(885); } });
@@ -28,6 +37,7 @@ test('reader uses only the immediate same-origin parent and never reads foreign 
   assert.equal(calls, 1);
   window.parent = window;
   assert.equal(reader.read(), null);
+  assert.equal(reader.connected(), true, 'an embedded exchange must not silently resume its standalone clock');
   assert.equal(calls, 1);
   Object.defineProperty(window, 'parent', { get() { throw new Error('SecurityError'); } });
   assert.equal(reader.read(), null);
@@ -75,14 +85,29 @@ test('catch-up visits exact final class ends and midnight in chronological order
   assert.equal(new Set(calls.map(clock=>`${clock.date}:${clock.minute}`)).size,calls.length);
 });
 
-test('rewind, a different save and an excessive jump request isolated state before mutation', () => {
+test('older snapshots of the same character are ignored without changing market history', () => {
   const state = {clockMode:'game',gameClock:snap(900),proof:'unchanged'};
   const original = JSON.stringify(state);
-  const process = () => assert.fail('reset must be handled by the caller');
-  for (const [snapshot, reason] of [[snap(899),'rewind'],[snap(900,{sessionId:'save-b'}),'different-session'],[snap(901,{date:'2026-11-14'}),'large-jump']]) {
-    assert.equal(applyGameClock(state,simpleCatalog,snapshot,{process}).reason,reason);
-    assert.equal(JSON.stringify(state),original);
-  }
+  const result = applyGameClock(state,simpleCatalog,snap(899),{process:()=>assert.fail('an older clock must not run the market')});
+  assert.deepEqual(result,{changed:false,resetRequired:false,reason:'rewind-ignored',ignored:true,steps:0});
+  assert.equal(JSON.stringify(state),original);
+});
+
+test('only a different character requests a different market namespace before mutation', () => {
+  const state = {clockMode:'game',gameClock:snap(900),proof:'unchanged'};
+  const original = JSON.stringify(state);
+  const result = applyGameClock(state,simpleCatalog,snap(900,{sessionId:'save-b'}),{process:()=>assert.fail('namespace must be selected by the caller')});
+  assert.deepEqual(result,{changed:false,resetRequired:true,reason:'different-session',steps:0});
+  assert.equal(JSON.stringify(state),original);
+});
+
+test('a long absence settles only the destination and preserves existing state', () => {
+  const state = {clockMode:'game',gameClock:snap(900),proof:{prices:[97,103],favorite:'professor-a'}};
+  const original = JSON.stringify(state.proof), calls = [];
+  const result = applyGameClock(state,simpleCatalog,snap(901,{date:'2026-12-14'}),{process:s=>calls.push({...currentClock(s)})});
+  assert.deepEqual(result,{changed:true,resetRequired:false,reason:'advanced-gap',steps:1});
+  assert.deepEqual(calls,[{date:'2026-12-14',minute:901,weekday:'월'}]);
+  assert.equal(JSON.stringify(state.proof),original);
 });
 
 test('actual campus processing unlocks a review exactly at the host class end, without duplicate evaluations', async () => {
