@@ -12,7 +12,7 @@ function database() {
       resolve(db);
     };
     request.onerror = () => { databasePromise = undefined; reject(request.error); };
-    request.onblocked = () => { databasePromise = undefined; reject(new Error('다른 데모 탭을 닫고 새로고침하면 기록 저장을 다시 사용할 수 있어요.')); };
+    request.onblocked = () => { databasePromise = undefined; reject(new Error('다른 거래소 탭을 닫고 새로고침하면 기록 저장을 다시 사용할 수 있어요.')); };
   });
   return databasePromise;
 }
@@ -38,6 +38,6 @@ export async function saveDemo(key, value) {
     transaction.objectStore('snapshots').put(value, key);
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
-    transaction.onabort = () => reject(transaction.error ?? new Error('시연 기록을 저장하지 못했어요.'));
+    transaction.onabort = () => reject(transaction.error ?? new Error('기록을 저장하지 못했어요.'));
   });
 }
