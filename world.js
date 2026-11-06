@@ -15,7 +15,8 @@ const PLAYER_SCALE = 2.2;    // 캐릭터 크기 (실제보다 크게 — 쿼터
 const WALK = 14, RUN = 26;   // 이동 속도 (m/s) — 캠퍼스가 1km라 실제보다 빠르게
 const ENTER_DIST = 4;        // 건물 벽에서 이 거리 안이면 출입 가능
 const LABEL_DIST = 150;      // 플레이어 주변 이 거리 안의 건물만 이름표
-const CAM_YAW = Math.PI / 4, CAM_PITCH = 1.05;
+const CAM_YAW = Math.PI / 4, CAM_PITCH = 1.05;   // 시작 카메라 방향 (드래그로 바뀜)
+const PITCH_MIN = 0.45, PITCH_MAX = 1.4;          // 기울기 한계: 너무 눕거나 정수리만 보이지 않게
 const NAV_CELL = 3;           // 길찾기 격자 크기 (m)
 const ZOOM_MIN = 45, ZOOM_MAX = 320;
 
@@ -64,7 +65,7 @@ let moveTarget = null;         // { path: [[x, y], ...], enter: collider | null,
 let nav = null;                // 걷기 가능한 격자 (길찾기용)
 let near = null;               // 지금 출입 가능한 건물
 let started = false;
-let zoom = 140, yaw = CAM_YAW, introSpin = true;
+let zoom = 140, yaw = CAM_YAW, pitch = CAM_PITCH, introSpin = true;
 let dayNight = null, minimap = null;
 
 // ── 캐릭터 (로우폴리 · 머리 큰 비율)
@@ -122,7 +123,6 @@ fetch('assets/map/campus.osm')
     dayNight = createDayNight({ scene, sun, hemi, campus, follow: avatar.root });
     minimap = createMinimap(document.querySelector('#minimap canvas'), campus.mini,
       campus.buildings.filter(m => m.userData.poly).map(m => ({ poly: m.userData.poly, style: m.userData.style })));
-    minimap.onClick(onMinimapClick);
     document.getElementById('loading')?.remove();
   })
   .catch(err => { const l = document.getElementById('loading'); if (l) l.textContent = '캠퍼스를 만들지 못했다: ' + err.message; console.error(err); });
@@ -359,35 +359,46 @@ renderer.domElement.addEventListener('wheel', e => {
   zoom = THREE.MathUtils.clamp(zoom * (1 + Math.sign(e.deltaY) * 0.12), ZOOM_MIN, ZOOM_MAX);
 }, { passive: false });
 
+// ── 마우스: 드래그로 카메라 회전 (좌우 = 방향, 위아래 = 기울기). 클릭으로 걷기는 없다
+const DRAG_YAW = 0.006, DRAG_PITCH = 0.004;   // 드래그 1px당 라디안
+const canvas = renderer.domElement;
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
-const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-let downAt = null;
-renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
-renderer.domElement.addEventListener('pointerup', e => {
-  if (!started || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
-  if (window.Game.inputBlocked()) return;
+let drag = null;                              // { x, y, dist, id }
+canvas.addEventListener('contextmenu', e => e.preventDefault());   // 우클릭 드래그도 회전
+canvas.addEventListener('pointerdown', e => {
+  if (!started) return;
+  drag = { x: e.clientX, y: e.clientY, dist: 0, id: e.pointerId };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag.x = e.clientX; drag.y = e.clientY;
+  drag.dist += Math.hypot(dx, dy);
+  if (drag.dist > 4) canvas.classList.add('dragging');
+  yaw -= dx * DRAG_YAW;
+  pitch = THREE.MathUtils.clamp(pitch + dy * DRAG_PITCH, PITCH_MIN, PITCH_MAX);
+});
+const endDrag = e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const clicked = drag.dist <= 4;
+  drag = null;
+  canvas.classList.remove('dragging');
+  if (clicked && e.type === 'pointerup') clickBuilding(e);
+};
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+
+// 바로 앞에 있는 건물을 클릭하면 들어가기 (E와 같다)
+function clickBuilding(e) {
+  if (!near || window.Game.inputBlocked()) return;
   mouse.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(mouse, camera);
   const hit = ray.intersectObjects(colliders.map(c => c.mesh), false)[0];
-  if (hit) {
-    const c = colliders.find(x => x.mesh === hit.object);
-    if (c === near) { tryEnter(); return; }
-    const p = doorPoint(c);
-    if (p) setTarget(p, c);
-    return;
-  }
-  const g = new THREE.Vector3();
-  if (ray.ray.intersectPlane(groundPlane, g)) setTarget([g.x, -g.z], null);
-});
-
-// 미니맵 클릭: 건물이면 그 건물 앞으로(도착하면 들어가기), 아니면 그 지점으로
-function onMinimapClick(p) {
-  if (!started || window.Game.inputBlocked()) return;
-  const c = colliders.find(x => ptInPoly(p[0], p[1], x.poly));
-  if (c) { const d = doorPoint(c); if (d) setTarget(d, c); return; }
-  setTarget(p, null);
+  if (hit && hit.object === near.mesh) tryEnter();
 }
 
+// 콘솔 디버그(__world.walkTo)용 자동 걷기
 function setTarget(p, enter) {
   const path = nav && findPath(player.p, p);
   if (!path || !path.length) { toast('🚧 거기까지 가는 길을 못 찾았다'); return; }
@@ -507,19 +518,27 @@ function updateOcclusion() {
   for (const m of now) if (!faded.has(m)) { setFade(m, true); faded.add(m); }
 }
 
+// 카메라: 플레이어를 부드럽게 따라가는 초점 주위를 yaw/pitch/zoom으로 공전
+const camFocus = new THREE.Vector3();
+let camZoom = zoom;
 function updateCamera(dt) {
   if (!started) {
     yaw += dt * 0.08;                       // 시작 화면: 천천히 둘러보기
   } else if (introSpin) {
-    introSpin = false; yaw = CAM_YAW;
+    introSpin = false; yaw = CAM_YAW; pitch = CAM_PITCH;
   }
-  const d = started ? zoom : 260;
-  const target = new THREE.Vector3(player.p[0], 0, -player.p[1]);
-  const off = new THREE.Vector3(d * Math.cos(CAM_PITCH) * Math.sin(yaw), d * Math.sin(CAM_PITCH), d * Math.cos(CAM_PITCH) * Math.cos(yaw));
-  camera.position.lerp(target.clone().add(off), started ? Math.min(1, dt * 8) : 1);
-  camera.lookAt(target);
-  sun.position.copy(target).addScaledVector(sun.userData.dir, SUN_DIST);
-  sun.target.position.copy(target);
+  const want = new THREE.Vector3(player.p[0], 0, -player.p[1]);
+  const k = started ? Math.min(1, dt * 8) : 1;
+  camFocus.lerp(want, k);
+  camZoom += ((started ? zoom : 260) - camZoom) * k;
+  const p = started ? pitch : CAM_PITCH;
+  camera.position.set(
+    camFocus.x + camZoom * Math.cos(p) * Math.sin(yaw),
+    camFocus.y + camZoom * Math.sin(p),
+    camFocus.z + camZoom * Math.cos(p) * Math.cos(yaw));
+  camera.lookAt(camFocus);
+  sun.position.copy(camFocus).addScaledVector(sun.userData.dir, SUN_DIST);
+  sun.target.position.copy(camFocus);
 }
 
 addEventListener('game-start', () => { started = true; });

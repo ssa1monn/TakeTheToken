@@ -9,8 +9,7 @@ const VIEW_R = 150;       // 미니맵 반지름이 보여주는 거리 (m)
 export function createMinimap(canvas, mini, buildings) {
   const base = drawBase(mini, buildings);
   const ctx = canvas.getContext('2d');
-  let size = 0, theta = 0, center = [0, 0];
-  let clickHandler = null;
+  let size = 0, theta = 0;
 
   function resize() {
     const css = canvas.clientWidth || 184, dpr = Math.min(2, devicePixelRatio);
@@ -32,7 +31,6 @@ export function createMinimap(canvas, mini, buildings) {
     resize();
     const S = size, R = S / 2, s = R / VIEW_R;
     theta = Math.PI / 2 - Math.atan2(forward[1], forward[0]);
-    center = player;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, S, S);
     ctx.save();
@@ -91,19 +89,7 @@ export function createMinimap(canvas, mini, buildings) {
     ctx.fillText('N', R + nx * nr, R + ny * nr + S * 0.003);
   }
 
-  // 클릭 → 지도 좌표
-  canvas.addEventListener('click', e => {
-    if (!clickHandler || !size) return;
-    const rect = canvas.getBoundingClientRect();
-    const R = rect.width / 2, s = R / VIEW_R;
-    const cx = e.clientX - rect.left - R, cy = e.clientY - rect.top - R;
-    if (Math.hypot(cx, cy) > R) return;
-    // toCanvasVec의 역변환
-    const rx = cx / s, ry = -cy / s, c = Math.cos(theta), n = Math.sin(theta);
-    clickHandler([center[0] + rx * c + ry * n, center[1] - rx * n + ry * c]);
-  });
-
-  return { draw, onClick: fn => { clickHandler = fn; } };
+  return { draw };
 }
 
 // 정적인 바탕 지도를 한 번만 그려 둔다 (북쪽이 위)
