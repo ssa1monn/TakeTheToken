@@ -168,6 +168,7 @@ function timeRunning() { return S && !S.ending && !paused && !modalOpen; }
 function update(dt) {
   if (!timeRunning()) return;
   S.weekT += dt * speed / WEEK_SECONDS;
+  drainCondition(S, dt * speed / WEEK_SECONDS);   // decay.js: 깨어 있는 동안 컨디션이 닳는다
   if (S.weekT >= 1) { S.weekT = 0; weekStep(); }
   else { maybeTimedEvent(S); relationTick(S); }   // relationTick: relations.js (부모님 정기 연락)
   renderWeekBar();
@@ -200,6 +201,7 @@ function weekStep() {
     if (s.stage !== 'ug') applyFx(s, { research: 3, cond: -2 }); // 연구실 생활
     weeklyActivities(s);                                           // 소속 활동 (activities.js)
   }
+  weeklyDecay(s);                                                  // decay.js: 챙기지 않은 관계는 소원해진다
 
   if (s.stage !== 'ug') {
     const p = papers(s);
@@ -287,7 +289,8 @@ function placeStatus(name) {
   if (S.usedThisWeek[key]) return { key, ok: false, reason: '이번 주에는 이미 다녀왔다' };
   return { key, ok: true };
 }
-function enterBuilding(name) {
+function enterBuilding(name, skipSleep) {
+  if (!skipSleep && offerSleep(name)) return;     // sleep.js: 내 방(제1기숙사)은 잠자기 메뉴부터
   const st = placeStatus(name);
   if (!st.key) { toast(`🚧 ${name || '이 건물'}: 아직 준비 중인 건물이다`); return; }
   if (!st.ok) { if (st.reason) toast(`🚪 ${st.reason}`); return; }
@@ -563,6 +566,7 @@ function evalHtml(s) {
       <div class="rep-top"><span>${STAT_ICON[k]} ${STAT_LABEL[k]}</span><b>${Math.round(s.rep[k])}</b></div>
       <div class="bar"><div class="fill ${s.rep[k] < 30 ? 'red' : s.rep[k] < 60 ? 'yellow' : 'green'}" style="width:${s.rep[k]}%"></div></div>
       <div class="rep-c">“${repComment(k, s.rep[k])}”</div>
+      ${repDecayNote(s, k)}
     </div>`).join('');
   const gp = s.gpas.slice(-8).map(g => `<div class="gp" title="${esc(g.label)} ${g.gpa}"><div style="height:${g.gpa / 4.5 * 100}%"></div><small>${g.gpa.toFixed(1)}</small></div>`).join('');
   return `
@@ -651,6 +655,7 @@ function initStart() {
       • 건물 <b>문 앞</b>에서 <b>E</b>를 누르면 들어간다 (지금은 📚 학산도서관만 열려 있다). 미니맵의 흰 선이 문이다<br>
       • 시간은 계속 흐른다. 한 주는 하루로 압축된다 (06:00 → 다음 날 06:00). 왼쪽 위 시계를 보자<br>
       • 낮과 밤에 일어나는 일이 다르다. 도서관은 새벽 2~6시에 문을 닫는다<br>
+      • 컨디션은 시간이 지나면 닳는다. 밤에 <b>내 방(제1기숙사)</b>에 들어가 자면 회복된다<br>
       • 왼쪽 위 <b>미니맵</b>은 화면 방향대로 돌아간다. 빨간 <b>!</b>가 들어갈 수 있는 건물이다<br>
       • 학생회관·도서관 등에서 <b>동아리·스터디</b>에 가입하면 매주 스탯이 쌓인다 (최대 ${MAX_ACTIVITIES}개, 오른쪽 패널에서 확인)<br>
       • 교수님·동기·선후배·부모님이 당신을 <b>평가</b>한다`));
