@@ -1,2 +1,5 @@
 .DS_Store
 .claude/settings.local.json
+
+# 컷신 원본 PNG는 로컬에만 (게임은 WebP 사용)
+assets/cutscenes/**/*.png

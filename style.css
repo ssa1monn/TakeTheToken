@@ -266,3 +266,23 @@ kbd { display: inline-block; background: #fff; color: var(--ink); border-radius:
   #minimap { top: 150px; width: 132px; height: 132px; }
   #clock { top: 290px; width: 132px; }
 }
+
+/* ── 이벤트 컷신 (cutscenes.js) */
+#modal-card.has-cutscene { width: min(760px, 100%); }
+.choice:focus-visible { outline: 3px solid rgba(74, 123, 208, .45); outline-offset: 2px; }
+.cutscene { margin: 12px 0 0; }
+.cutscene-frame {
+  position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 14px;
+  background: linear-gradient(135deg, #eadfcd, #d7c3a3); border: 1px solid var(--line);
+}
+.cutscene-image { width: 100%; height: 100%; display: block; object-fit: cover; }
+.cutscene-image.failed { display: none; }
+.cutscene-fallback { position: absolute; inset: 0; place-items: center; padding: 24px; color: var(--muted); text-align: center; }
+.cutscene-fallback:not([hidden]) { display: grid; }
+.cutscene-caption { margin-top: 12px; font-size: 15px; line-height: 1.6; font-weight: 650; }
+@media (max-width: 620px) {
+  #modal { padding: 10px; }
+  #modal-card { padding: 18px; max-height: 94vh; }
+  #modal-card.has-cutscene .m-emoji { font-size: 32px; }
+  .cutscene-caption { font-size: 14px; }
+}

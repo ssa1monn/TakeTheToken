@@ -259,7 +259,7 @@ const LIBRARY_EVENTS = [
   { id: 'lib_window', time: ['morning', 'day'], emoji: '🪟', title: '창가 자리 전쟁',
     text: '햇살 좋은 창가 자리. 그런데 주인은 없고 가방만 3시간째 앉아 있다.',
     choices: [
-      { label: '가방을 옆으로 치우고 앉는다', run: s => ({ fx: { study: 8, peers: -3 }, msg: '집중이 잘 됐다. 돌아온 가방 주인의 눈빛은 잊히지 않는다.', post: '도서관 3층 창가 자리 가방 치운 사람 누구임? 내 자리였는데' }) },
+      { label: '가방을 옆으로 치우고 앉는다', cutscene: { src: 'assets/cutscenes/library/lib_window.webp', alt: '창가 자리로 돌아온 가방 주인과 앉아 있는 학생이 무언의 눈싸움을 하는 장면' }, run: s => ({ fx: { study: 8, peers: -3 }, msg: '집중이 잘 됐다. 돌아온 가방 주인의 눈빛은 잊히지 않는다.', post: '도서관 3층 창가 자리 가방 치운 사람 누구임? 내 자리였는데' }) },
       { label: '구석 자리로 간다', run: s => ({ fx: { study: 5 }, msg: '구석은 조용했다. 와이파이도 조용했다.' }) },
       { label: '포기하고 카페로', run: s => ({ fx: { study: 2, money: -2, cond: 3 }, msg: '아아 한 잔에 3시간 버티기 성공.' }) },
     ] },
@@ -270,19 +270,19 @@ const LIBRARY_EVENTS = [
           ? { fx: { study: 4, cond: -4 }, msg: '포스트잇이 대나무숲에 박제됐다. "이 정도로 예민하면 집에서 하세요"', post: '도서관 포스트잇 빌런 vs 키보드 빌런 누가 더 잘못함?' }
           : { fx: { study: 6 }, msg: '키보드 소리가 멈췄다. 조용한 승리.' } },
       { label: '이어폰 끼고 참는다', run: s => ({ fx: { study: 4, cond: -3 }, msg: '노이즈캔슬링도 청축은 못 이긴다.' }) },
-      { label: '나도 노트북을 꺼내 더 세게 친다', run: s => ({ fx: { study: 3, peers: -4 }, msg: '열람실에 키보드 협주곡이 울려 퍼졌다.', post: '오늘 도서관 4층에서 키보드 배틀 남 ㅋㅋㅋ' }) },
+      { label: '나도 노트북을 꺼내 더 세게 친다', cutscene: { src: 'assets/cutscenes/library/lib_keyboard.webp', alt: '조용한 열람실에서 두 학생이 기계식 키보드를 경쟁하듯 세게 치는 장면' }, run: s => ({ fx: { study: 3, peers: -4 }, msg: '열람실에 키보드 협주곡이 울려 퍼졌다.', post: '오늘 도서관 4층에서 키보드 배틀 남 ㅋㅋㅋ' }) },
     ] },
   { id: 'lib_exam_seat', time: ['morning', 'day'], emoji: '🪑', title: '시험기간 좌석 대란', when: s => (s.week >= 6 && s.week <= 8) || s.week >= 14,
     text: '좌석 예약 앱이 열리자마자 매진됐다. 시험이 코앞이다.',
     choices: [
-      { label: '새벽 6시에 줄을 선다', run: s => ({ fx: { study: 12, cond: -10 }, msg: '오픈런 성공. 해가 뜨는 걸 도서관에서 봤다.' }) },
+      { label: '새벽 6시에 줄을 선다', cutscene: { src: 'assets/cutscenes/library/lib_exam_seat.webp', alt: '해 뜨기 전 도서관 입구에 시험 좌석을 기다리는 학생들이 길게 줄 선 장면' }, run: s => ({ fx: { study: 12, cond: -10 }, msg: '오픈런 성공. 해가 뜨는 걸 도서관에서 봤다.' }) },
       { label: '계단에 앉아서 한다', run: s => ({ fx: { study: 7, cond: -4 }, msg: '계단 3층 참이 생각보다 아늑하다.' }) },
       { label: '집에서 하면 되지', run: s => ({ fx: { study: 2, cond: 3 }, msg: '침대는 공부하는 곳이 아니었다.' }) },
     ] },
   { id: 'lib_note', emoji: '💌', title: '책 사이에 끼워진 쪽지',
     text: '빌린 책을 펼치자 쪽지가 떨어졌다. "매일 같은 자리에 앉으시네요. 혹시 커피 한잔?"',
     choices: [
-      { label: '답장을 끼워서 반납한다', run: s => {
+      { label: '답장을 끼워서 반납한다', cutscene: { src: 'assets/cutscenes/library/lib_note.webp', alt: '학생이 도서관 책 사이에 설레는 표정으로 손글씨 쪽지를 몰래 끼우는 장면' }, run: s => {
           if (!s.flags.crush && Math.random() < 0.4) { s.flags.crush = true; return { fx: { romance: 12, cond: 6 }, msg: '다음 날 책 사이에 답장의 답장이 있었다. 도서관 썸이 시작됐다.', post: '도서관 쪽지로 사귄 사람 실존함? (실존함)' }; }
           return { fx: { romance: 5 }, msg: '답장은 오지 않았다. 반납함이 너무 깊었나 보다.' }; } },
       { label: '공부에 집중한다', run: s => ({ fx: { study: 7 }, msg: '쪽지는 책갈피가 되었다.' }) },
@@ -290,43 +290,43 @@ const LIBRARY_EVENTS = [
   { id: 'lib_sleep', emoji: '😴', title: '책상 위의 꿀잠',
     text: '전공책 3페이지 만에 눈꺼풀이 무거워진다.',
     choices: [
-      { label: '엎드려서 잔다', run: s => ({ fx: { cond: 10, study: 1 }, msg: '일어나 보니 얼굴에 책 자국이 찍혀 있었다.' }) },
+      { label: '엎드려서 잔다', cutscene: { src: 'assets/cutscenes/library/lib_sleep.webp', alt: '전공책에 얼굴을 대고 잠들었다가 책 자국이 난 채 깨어난 학생의 장면' }, run: s => ({ fx: { cond: 10, study: 1 }, msg: '일어나 보니 얼굴에 책 자국이 찍혀 있었다.' }) },
       { label: '에너지 드링크를 마신다', run: s => ({ fx: { study: 7, cond: -5, money: -2 }, msg: '심장이 공부하는 속도보다 빨리 뛴다.' }) },
     ] },
   { id: 'lib_studyroom', time: ['day', 'evening'], emoji: '🧑‍🤝‍🧑', title: '그룹 스터디룸', when: s => s.stage === 'ug',
     text: '팀플 회의를 하려고 스터디룸을 예약했다. 4명 중 2명이 왔다.',
     choices: [
-      { label: '온 사람끼리 끝낸다', run: s => ({ fx: { study: 6, peers: 3, cond: -3 }, msg: '둘이서 넷의 몫을 했다. 서로를 전우라 부르기로 했다.' }) },
+      { label: '온 사람끼리 끝낸다', cutscene: { src: 'assets/cutscenes/library/lib_studyroom.webp', alt: '빈 의자 두 개를 둔 스터디룸에서 학생 둘이 지친 채 네 사람 몫을 해내는 장면' }, run: s => ({ fx: { study: 6, peers: 3, cond: -3 }, msg: '둘이서 넷의 몫을 했다. 서로를 전우라 부르기로 했다.' }) },
       { label: '안 온 사람 기다린다', run: s => ({ fx: { study: 2, cond: -2 }, msg: '1시간 뒤 "나 오늘 못 갈 듯 ㅠ"가 왔다.' }) },
     ] },
   { id: 'lib_research', time: ['day', 'evening'], emoji: '🔎', title: '교수님의 부탁', when: s => s.stage !== 'ug' || (s.stageSem >= 3 && s.rep.prof >= 55),
     text: '"도서관에서 이 논문 좀 찾아다 줄 수 있나?" 교수님의 메시지가 왔다.',
     choices: [
-      { label: '찾아서 요약까지 해 간다', run: s => ({ fx: { research: 5, prof: 5, cond: -4 }, msg: '"오, 꼼꼼하군." 연구의 세계에 발을 들였다.' }) },
+      { label: '찾아서 요약까지 해 간다', cutscene: { src: 'assets/cutscenes/library/lib_research.webp', alt: '논문 더미와 빼곡한 요약 메모 사이에서 밤늦게 자료를 정리하는 학생의 장면' }, run: s => ({ fx: { research: 5, prof: 5, cond: -4 }, msg: '"오, 꼼꼼하군." 연구의 세계에 발을 들였다.' }) },
       { label: '링크만 보내드린다', run: s => ({ fx: { research: 1, prof: 1 }, msg: '"고맙네." 그게 다였다.' }) },
     ] },
   { id: 'lib_overdue', time: ['day'], emoji: '📕', title: '연체 도서',
     text: '지난 학기에 빌린 책이 아직 가방에 있다. 대출 정지 30일.',
     choices: [
       { label: '연체료를 내고 반성한다', run: s => ({ fx: { money: -3, study: 4 }, msg: '사서 선생님이 "다음엔 꼭이요"라고 했다.' }) },
-      { label: '친구 학생증으로 빌린다', run: s => ({ fx: { study: 5, peers: -2 }, msg: '친구도 대출 정지가 됐다.' }) },
+      { label: '친구 학생증으로 빌린다', cutscene: { src: 'assets/cutscenes/library/lib_overdue.webp', alt: '대출 정지 안내 앞에서 친구 학생증을 든 두 학생이 난감하게 서로를 보는 장면' }, run: s => ({ fx: { study: 5, peers: -2 }, msg: '친구도 대출 정지가 됐다.' }) },
     ] },
   { id: 'lib_openrun', time: ['morning'], emoji: '🌅', title: '아침 6시 오픈런',
     text: '문 열자마자 들어왔다. 열람실이 텅 비어 있다. 이 고요함, 내 거다.',
     choices: [
       { label: '제일 좋은 자리에서 집중', run: s => ({ fx: { study: 9, cond: -3 }, msg: '점심때까지 한 번도 폰을 안 봤다. 기적이다.' }) },
-      { label: '좋은 자리 잡고 다시 잔다', run: s => ({ fx: { study: 3, cond: 5 }, msg: '자리는 지켰다. 공부는 못 지켰다.' }) },
+      { label: '좋은 자리 잡고 다시 잔다', cutscene: { src: 'assets/cutscenes/library/lib_openrun.webp', alt: '텅 빈 아침 도서관 최고의 창가 자리를 차지하고 다시 잠든 학생의 장면' }, run: s => ({ fx: { study: 3, cond: 5 }, msg: '자리는 지켰다. 공부는 못 지켰다.' }) },
     ] },
   { id: 'lib_night', time: ['night', 'late'], emoji: '🌙', title: '야간 열람실',
     text: '불 꺼진 캠퍼스에서 열람실만 환하다. 남은 사람은 나와 정체불명의 고시생 둘.',
     choices: [
-      { label: '고시생들과 무언의 연대', run: s => { inc(s, 'allnighter'); return { fx: { study: 10, cond: -8 }, msg: '새벽 1시, 서로 눈인사를 했다. 전우애가 생겼다.' }; } },
+      { label: '고시생들과 무언의 연대', cutscene: { src: 'assets/cutscenes/library/lib_night.webp', alt: '새벽 한 시 환한 열람실에서 남은 세 학생이 조용히 눈인사를 나누는 장면' }, run: s => { inc(s, 'allnighter'); return { fx: { study: 10, cond: -8 }, msg: '새벽 1시, 서로 눈인사를 했다. 전우애가 생겼다.' }; } },
       { label: '자판기 커피 한 잔 하고 간다', run: s => ({ fx: { study: 4, money: -1, cond: -2 }, msg: '자판기 앞에서 고시생과 인생 상담을 했다.' }) },
     ] },
   { id: 'lib_closing', time: ['night', 'late'], emoji: '📢', title: '폐관 30분 전 방송',
     text: '"이용자 여러분, 잠시 후 도서관 문을 닫습니다." 아직 한 챕터 남았다.',
     choices: [
-      { label: '30분 만에 몰아친다', run: s => ({ fx: { study: 6, cond: -4 }, msg: '경비 아저씨가 불을 끌 때 마지막 문장을 읽었다.' }) },
+      { label: '30분 만에 몰아친다', cutscene: { src: 'assets/cutscenes/library/lib_closing.webp', alt: '도서관 불이 차례로 꺼지는 가운데 마지막 문장을 다급히 읽는 학생의 장면' }, run: s => ({ fx: { study: 6, cond: -4 }, msg: '경비 아저씨가 불을 끌 때 마지막 문장을 읽었다.' }) },
       { label: '책을 빌려서 기숙사로', run: s => ({ fx: { study: 3, cond: 2 }, msg: '책은 침대 옆에서 베개가 되었다.' }) },
     ] },
   { id: 'lib_plain',emoji: '📖', title: '평범한 도서관의 하루',
@@ -334,7 +334,7 @@ const LIBRARY_EVENTS = [
     choices: [
       { label: '딱 3시간만', run: s => ({ fx: { study: 5, cond: -2 }, msg: '정확히 3시간 하고 일어났다. 뿌듯하다.' }) },
       { label: '막차 시간까지', run: s => { inc(s, 'allnighter'); return { fx: { study: 9, cond: -7 }, msg: '셔틀 막차를 놓쳤다. 공부량은 놓치지 않았다.' }; } },
-      { label: '유튜브 "5분만"', run: s => ({ fx: { study: 1, cond: 3 }, msg: '알고리즘이 나를 3시간 붙잡았다.' }) },
+      { label: '유튜브 "5분만"', cutscene: { src: 'assets/cutscenes/library/lib_plain.webp', alt: '전공책을 펼친 학생이 노트북 영상에 빠져 시간 가는 줄 모르는 장면' }, run: s => ({ fx: { study: 1, cond: 3 }, msg: '알고리즘이 나를 3시간 붙잡았다.' }) },
     ] },
 ];
 

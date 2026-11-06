@@ -33,16 +33,16 @@ function ev(id, emoji, title, text, choices, opt = {}) {
   return { id, emoji, title, text, choices, ...opt };
 }
 
-function ch(label, fx, msg, post) {
-  return { label, run: () => ({ fx, msg, post }) };
+function ch(label, fx, msg, post, cutscene) {
+  return { label, run: () => ({ fx, msg, post }), ...(cutscene ? { cutscene } : {}) };
 }
 
-function gamble(label, p, win, lose) {
+function gamble(label, p, win, lose, cutscene) {
   const out = r => ({ fx: r[0], msg: r[1], post: r[2] });
-  return { label, run: () => (Math.random() < p ? out(win) : out(lose)) };
+  return { label, run: () => (Math.random() < p ? out(win) : out(lose)), ...(cutscene ? { cutscene } : {}) };
 }
 
-function act(label, run) { return { label, run }; }
+function act(label, run, cutscene) { return { label, run, ...(cutscene ? { cutscene } : {}) }; }
 
 const UG_ONLY = s => s.stage === 'ug';
 const GRAD_ONLY = s => s.stage !== 'ug';

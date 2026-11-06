@@ -437,6 +437,7 @@ function nextModal() {
 }
 function modalHtml(emoji, title, body, buttons) {
   const m = $('#modal-card');
+  m.classList.remove('has-cutscene');
   m.innerHTML = `<div class="m-emoji">${emoji}</div><h2>${esc(title)}</h2><div class="m-body">${body}</div><div class="m-choices"></div>`;
   const wrap = m.querySelector('.m-choices');
   buttons.forEach(b => {
@@ -450,6 +451,26 @@ function modalHtml(emoji, title, body, buttons) {
 function showInfoModal(emoji, title, body, after) {
   modalHtml(emoji, title, body, [{ label: '확인', primary: true, onClick: () => { if (after) after(); nextModal(); } }]);
 }
+function applyEventResult(res) {
+  const parts = applyFx(S, res.fx || {});
+  if (res.post) addPost(S, res.post);
+  renderAll();
+  return parts;
+}
+function showEventResult(ev, res, parts, after) {
+  const body = `<p>${esc(res.msg || '')}</p>${parts.length ? `<div class="fx">${parts.map(p => `<span>${esc(p)}</span>`).join('')}</div>` : ''}`;
+  modalHtml(ev.emoji, ev.title, body, [{ label: '확인', primary: true, onClick: () => { if (after) after(); nextModal(); } }]);
+}
+function showEventCutscene(ev, cutscene, res, parts, continueToResult) {
+  const body = Cutscenes.cutsceneMarkup(cutscene, res.msg || '', esc);
+  modalHtml(ev.emoji, ev.title, body, [{ label: '결과 보기', primary: true, onClick: continueToResult }]);
+  const card = $('#modal-card');
+  card.classList.add('has-cutscene');
+  const image = card.querySelector('.cutscene-image');
+  if (image) image.addEventListener('error', () => Cutscenes.markImageFailed(image), { once: true });
+  const primary = card.querySelector('.choice.primary');
+  if (primary) primary.focus();
+}
 // after: 결과 확인 후 실행 / custom: 결과를 직접 처리 (true 반환 시 결과 화면 생략)
 function showEvent(ev, after, custom) {
   const s = S;
@@ -458,13 +479,14 @@ function showEvent(ev, after, custom) {
     return {
       label: c.label, sub: c.sub, disabled: !ok,
       onClick: () => {
-        const res = c.run(s) || {};
-        if (custom && custom(res)) return;
-        const parts = applyFx(s, res.fx || {});
-        if (res.post) addPost(s, res.post);
-        renderAll();
-        const body = `<p>${esc(res.msg || '')}</p>${parts.length ? `<div class="fx">${parts.map(p => `<span>${esc(p)}</span>`).join('')}</div>` : ''}`;
-        modalHtml(ev.emoji, ev.title, body, [{ label: '확인', primary: true, onClick: () => { if (after) after(); nextModal(); } }]);
+        Cutscenes.presentChoice({
+          choice: c,
+          state: s,
+          custom,
+          applyResult: applyEventResult,
+          showCutscene: (cutscene, res, parts, next) => showEventCutscene(ev, cutscene, res, parts, next),
+          showResult: (res, parts) => showEventResult(ev, res, parts, after),
+        });
       },
     };
   }));

@@ -27,24 +27,24 @@ addPlace('natsci', { match: '자연과학/생명과학기술대학 (05)', emoji:
 
 addPlace('infotech', { match: '정보대(07)', emoji: '💻', name: '정보기술대학', events: [
   ev('it7_hw', '⌨️', '코딩 과제 마감', '과제 마감 2시간 전. 컴파일 에러 47개.', [
-    act('밤을 새운다', s => { inc(s, 'allnighter'); return { fx: { study: 9, spec: 2, cond: -8 }, msg: '마지막 에러는 세미콜론 하나였다. 5시 58분 제출.' }; }),
+    act('밤을 새운다', s => { inc(s, 'allnighter'); return { fx: { study: 9, spec: 2, cond: -8 }, msg: '마지막 에러는 세미콜론 하나였다. 5시 58분 제출.' }; }, { src: 'assets/cutscenes/infotech/it7_hw.webp', alt: '새벽 5시 58분 학생이 세미콜론 하나를 고치고 코딩 과제를 제출하는 장면' }),
     ch('AI에게 물어본다', { study: 4, cond: -2 }, '코드는 돌아갔다. 왜 돌아가는지는 모른다.'),
   ], { time: ['evening', 'night', 'late'] }),
   ev('it7_hackathon', '🏆', '교내 해커톤', '24시간 해커톤. 팀원 중 한 명이 "기획은 내가 할게"라고 했다.', [
     gamble('밤새 개발한다', 0.35, [{ spec: 12, social: 4, cond: -8 }, '우수상! 상금으로 팀 회식을 했다.', '해커톤 우수상 팀 중에 {who} 있대 ㄷㄷ'],
-      [{ spec: 5, cond: -8 }, '데모 직전에 서버가 터졌다. 발표는 슬라이드로 했다.']),
+      [{ spec: 5, cond: -8 }, '데모 직전에 서버가 터졌다. 발표는 슬라이드로 했다.'], { src: 'assets/cutscenes/infotech/it7_hackathon.webp', alt: '해커톤 발표 직전 팀원들이 노트북의 서버 상태를 초조하게 확인하는 장면' }),
     ch('피자만 먹고 간다', { cond: 3, peers: -1 }, '해커톤 피자는 맛있었다. 코드는 없다.'),
   ]),
   ev('it7_git', '🔀', '깃 충돌', '팀 프로젝트 main 브랜치에 누군가 강제 푸시를 했다. 내 코드가 사라졌다.', [
     ch('커밋 로그를 뒤져 복구한다', { spec: 4, study: 3, cond: -4 }, '복구했다. git reflog의 존재를 처음 알았다.'),
-    ch('단톡방에 범인을 찾는다', { peers: -4, social: 1 }, '범인은 3일 전의 나였다.'),
+    ch('단톡방에 범인을 찾는다', { peers: -4, social: 1 }, '범인은 3일 전의 나였다.', undefined, { src: 'assets/cutscenes/infotech/it7_git.webp', alt: '팀 채팅으로 범인을 찾던 학생이 커밋 기록에서 과거의 자신을 발견하는 장면' }),
   ]),
   ev('it7_server', '🖲️', '서버실 냉기', '정보대 서버실 앞 복도가 제일 시원하다. 노트북 들고 앉은 사람들이 있다.', [
-    ch('합류해서 공부한다', { study: 5, cond: 2 }, '팬 소리가 백색소음이었다.'),
+    ch('합류해서 공부한다', { study: 5, cond: 2 }, '팬 소리가 백색소음이었다.', undefined, { src: 'assets/cutscenes/infotech/it7_server.webp', alt: '차가운 서버실 앞 복도에서 여러 학생이 노트북을 펴고 함께 공부하는 장면' }),
     ch('같이 앉은 사람과 대화한다', { social: 4, spec: 1 }, '같은 과 선배였다. 인턴 정보를 들었다.'),
   ]),
   ev('it7_club', '👾', '개발 동아리 스터디', '알고리즘 스터디 모집. "백준 골드 이상".', [
-    act('실력을 숨기고 들어간다', s => ({ fx: { study: 5, spec: 3, cond: -3, seniors: s.stats.spec > 40 ? 3 : -2 }, msg: s.stats.spec > 40 ? '생각보다 잘 따라갔다. 숨길 필요가 없었다.' : '첫 문제에서 실버라는 게 들통났다.' })),
+    act('실력을 숨기고 들어간다', s => ({ fx: { study: 5, spec: 3, cond: -3, seniors: s.stats.spec > 40 ? 3 : -2 }, msg: s.stats.spec > 40 ? '생각보다 잘 따라갔다. 숨길 필요가 없었다.' : '첫 문제에서 실버라는 게 들통났다.' }), { src: 'assets/cutscenes/infotech/it7_club.webp', alt: '알고리즘 스터디 첫 문제를 앞에 두고 실력을 숨기려던 학생이 긴장하는 장면' }),
     ch('혼자 문제를 푼다', { study: 4 }, '혼자 풀면 아무도 내 오답을 모른다.'),
   ], { when: UG_ONLY }),
 ]});
