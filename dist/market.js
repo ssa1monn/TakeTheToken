@@ -1,4 +1,5 @@
 import { calendarClock, currentClock, evaluationWindow, validateComment } from './campus.js';
+import { normalizeGameClock } from './game-clock.js';
 
 export const VERSION = 3;
 export const MARKET_VERSION = 3;
@@ -107,8 +108,8 @@ function independentVariation(stock, professorId, seed, lively, historical) {
   return {deltas,label,eventAt:Math.floor(rng()*count),regime:model.regime};
 }
 
-function syntheticReviews(courseId, day) {
-  const rng = random(`${courseId}:${day}`);
+function syntheticReviews(courseId, day, seed = '') {
+  const rng = random(`${seed ? `${seed}:` : ''}${courseId}:${day}`);
   const bias = (hash(courseId) % 31) - 15;
   return Array.from({ length: 8 }, () => ({
     gpa: round(2 + rng() * 2.5),
@@ -162,7 +163,7 @@ export function queueEvent(state, catalog, { type, targetId }) {
   return true;
 }
 
-export function closeMarket(state, catalog, { marketPulse = false, historicalReviews = null, now } = {}) {
+export function closeMarket(state, catalog, { marketPulse = false, historicalReviews = null, now, warmup = false } = {}) {
   ensureMarketData(state, catalog);
   const day = state.day + 1;
   const pending = Object.entries(state.pendingReviews);
@@ -221,10 +222,11 @@ export function closeMarket(state, catalog, { marketPulse = false, historicalRev
     const research = eventContribution('research',professor.id,.12);
     const department = eventContribution('department',professor.department,.07);
     // Every professor has an independent regime and random path. No trading or demand model is used.
-    const movement = marketPulse ? independentVariation(stock,professor.id,historicalReviews?'history-v3':state.randomSeed,lively,!!historicalReviews) : null;
+    const movement = marketPulse ? independentVariation(stock,professor.id,historicalReviews && !warmup?'history-v3':state.randomSeed,lively,!!historicalReviews) : null;
+    if (warmup && movement) movement.deltas = movement.deltas.map(delta => delta * .7);
     const variation = movement?.deltas.reduce((sum,n)=>sum+n,0) ?? 0;
     const knownImpact = teaching+research+department;
-    const lower = Math.max(1,open*.86,stock.dayOpenPrice*.55), upper = Math.min(open*1.14,stock.dayOpenPrice*1.45);
+    const lower = Math.max(warmup ? 85 : 1,open*.86,stock.dayOpenPrice*.55), upper = Math.min(open*1.14,stock.dayOpenPrice*1.45,warmup ? 115 : Infinity);
     const pricePath = [open];
     if (movement) {
       for(let i=0;i<movement.deltas.length;i++) {
@@ -236,7 +238,7 @@ export function closeMarket(state, catalog, { marketPulse = false, historicalRev
     const price = pricePath.at(-1);
     const change = price/open-1;
     const adjustment = change-knownImpact-variation;
-    if (Math.abs(adjustment)>1e-12) causes.push({id:`adjustment:${day}:${professor.id}`,type:'variation',title:'가격 한도·반올림',summary:'회당 ±14% · 당일 ±45% · 소수 둘째 자리',impact:adjustment});
+    if (Math.abs(adjustment)>1e-12) causes.push({id:`adjustment:${day}:${professor.id}`,type:'variation',title:'가격 한도·반올림',summary:warmup?'초기 이력 85~115 유니코인 · 소수 둘째 자리':'회당 ±14% · 당일 ±45% · 소수 둘째 자리',impact:adjustment});
     const contributions = { teaching, research, department, variation, adjustment };
     Object.assign(stock, {
       price, experience, lastReturn: change, todayReturn: price / stock.dayOpenPrice - 1,
@@ -256,7 +258,7 @@ export function closeMarket(state, catalog, { marketPulse = false, historicalRev
   return state.lastClose;
 }
 
-export function createState(catalog, options = {}) {
+function createBaseState(catalog, options = {}) {
   const state = {
     version: VERSION, marketVersion: MARKET_VERSION, volatilityMode: options.volatilityMode ?? 'lively', day: 0, gpa: 3.8,
     selectedCourseIds: DEFAULT_COURSE_CODES.map(code => catalog.courses.find(c => c.code === code)?.id).filter(Boolean),
@@ -268,6 +270,11 @@ export function createState(catalog, options = {}) {
   for (const p of catalog.professors) {
     state.stocks[p.id] = { price: 100, history: [{ day: 0, price: 100, date: '2026-09-07', minute: 510, open: 100, high: 100, low: 100, close: 100, causes: [], simulated: true }], experience: 50, lastReturn: 0, contributions: { teaching: 0, research: 0, department: 0, variation: 0, adjustment: 0 } };
   }
+  return state;
+}
+
+export function createState(catalog, options = {}) {
+  const state = createBaseState(catalog, options);
   // Reproducible fictional history. Instructor names and course links remain source data.
   for (let day = 1; day <= 43; day++) {
     const historicDate = dateObjectForDay(day).toISOString().slice(0, 10);
@@ -291,6 +298,55 @@ export function createState(catalog, options = {}) {
   state.demoDate = '2026-11-06';
   state.minute = 800;
   for (const stock of Object.values(state.stocks)) stock.variationState = null;
+  return state;
+}
+
+/** A new character starts after one calm week; reopening uses its saved state. */
+export function createGameState(catalog, snapshot) {
+  const normalized = normalizeGameClock(snapshot);
+  if (!normalized) throw new Error('올바른 게임 시작 기록이 필요해요.');
+  // A late first visit starts at character creation, then the caller catches up.
+  const startClock = { ...normalized, ...(normalized.startedAt ?? {}) };
+  const parsed = new Date(`${startClock.date}T00:00:00Z`);
+  const seed = hash(`game-market-v1:${snapshot.sessionId}`);
+  const state = createBaseState(catalog, { seed, volatilityMode: 'calm' });
+  const dateAt = offset => new Date(parsed.getTime() + offset * 86_400_000).toISOString().slice(0,10);
+  const dates = Array.from({length:7},(_,i)=>dateAt(i-7)).filter(date=>!['토','일'].includes(calendarClock(date,0).weekday));
+  const ticks = [540,630,720,810,900,990,1080,1170];
+  for (const stock of Object.values(state.stocks)) Object.assign(stock.history[0], {date:dates[0],minute:480});
+  const completed = new Set();
+  for (const date of dates) for (const minute of ticks) {
+    state.demoDate = date;
+    state.minute = minute;
+    const clock = calendarClock(date,minute), day = state.day + 1, historicalReviews = {};
+    for (const c of catalog.courses) {
+      const key = `${date}:${c.id}`, window = evaluationWindow(c,clock);
+      if (!window.allowed || completed.has(key)) continue;
+      completed.add(key);
+      const reviews = syntheticReviews(c.id,day,seed).map((r,i)=>({...r,id:`history:${date}:${c.id}:${i}`,nickname:['복습하는 감자','필기하는 쿼카','실습하는 오리'][i%3],date,minute:window.end,comment:r.score>=70?'예제를 직접 풀면서 오늘 개념이 연결됐어요':r.score<45?'진도가 빨라서 복습을 한 번 더 해보려고요':'큰 흐름은 알겠는데 직접 풀어보면 잠깐 멈추게 돼요'}));
+      const aggregate = aggregateReviews(reviews);
+      historicalReviews[c.id] = {reviews,aggregate,oldScore:sessionAverage(state.sessions[c.id]??[])};
+      state.sessions[c.id] = [...(state.sessions[c.id]??[]),{day,date,...aggregate}].slice(-4);
+    }
+    closeMarket(state,catalog,{marketPulse:true,historicalReviews,warmup:true});
+  }
+  state.demoDate = startClock.date;
+  state.minute = startClock.minute;
+  state.clockMode = 'game';
+  state.gameClock = startClock;
+  state.playing = !startClock.paused;
+  state.volatilityMode = 'lively';
+  state.lastMarketPulse = `${startClock.date}:${startClock.minute}`;
+  state.lastEventDate = startClock.date;
+  state.lastEventMinute = startClock.minute;
+  state.lastClose = null;
+  state.marketOrigin = {kind:'new-character',version:1,sessionId:snapshot.sessionId,seed,startedAt:{date:startClock.date,minute:startClock.minute},fromDate:dates[0],throughDate:dates.at(-1),calendarDays:7,observations:state.day};
+  for (const stock of Object.values(state.stocks)) {
+    stock.variationState = null;
+    stock.priceDate = startClock.date;
+    stock.dayOpenPrice = stock.price;
+    stock.todayReturn = 0;
+  }
   return state;
 }
 

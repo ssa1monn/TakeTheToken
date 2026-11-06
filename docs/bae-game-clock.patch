@@ -1,53 +1,91 @@
+diff --git a/game.js b/game.js
+index 19d3e14..50d83f1 100644
 --- a/game.js
 +++ b/game.js
-@@ -52,6 +52,7 @@
-   const s = {
-     name: name || '새내기', major: majorId, hakbun: 26,
-     stage: 'ug', stageSem: 1, week: 1, weekT: 0,
-+    exchangeSessionId: crypto.randomUUID(), exchangeDay: 0,
-     money: 30, cond: 80,
-     stats: { social: 0, spec: 0, romance: 0, research: 0 },
-     semStudy: 0, studyBonus: 0, stageResearch: 0,
-@@ -168,7 +169,7 @@
- function update(dt) {
+@@ -170,7 +170,7 @@ function update(dt) {
    if (!timeRunning()) return;
    S.weekT += dt * speed / WEEK_SECONDS;
--  if (S.weekT >= 1) { S.weekT = 0; weekStep(); }
-+  if (S.weekT >= 1) { S.exchangeDay++; S.weekT = 0; weekStep(); }
+   drainCondition(S, dt * speed / WEEK_SECONDS);   // decay.js: 깨어 있는 동안 컨디션이 닳는다
+-  if (S.weekT >= 1) { S.exchangeDay++; S.weekT = 0; weekStep(); }
++  if (S.weekT >= 1) { S.weekT = 0; weekStep(); }
    else { maybeTimedEvent(S); relationTick(S); }   // relationTick: relations.js (부모님 정기 연락)
    renderWeekBar();
    renderClock();
-@@ -658,6 +659,13 @@
+@@ -192,6 +192,8 @@ function maybeTimedEvent(s) {
+ 
+ function weekStep() {
+   const s = S;
++  // Both the normal clock and sleeping advance through this boundary.
++  s.exchangeDay = (s.exchangeDay ?? 0) + 1;
+   if (s.burnout > 0) {
+     s.burnout--;
+     s.cond = clamp(s.cond + 15);
+@@ -687,11 +689,11 @@ function initStart() {
  }
  
  function startGame() {
-+  // Older saves receive an ID once; the ID and day survive save/load.
-+  S.exchangeSessionId ||= crypto.randomUUID();
-+  if (!Number.isInteger(S.exchangeDay)) {
-+    const pastStages = S.gpas.filter(g => g.stage !== S.stage).length;
-+    S.exchangeDay = (pastStages + Math.max(0, S.stageSem - 1)) * WEEKS + Math.max(0, S.week - 1);
-+  }
-+  save();
+-  // Older saves receive an ID once; the ID and day survive save/load.
+-  S.exchangeSessionId ||= crypto.randomUUID();
+-  if (!Number.isInteger(S.exchangeDay)) {
+-    const pastStages = S.gpas.filter(g => g.stage !== S.stage).length;
+-    S.exchangeDay = (pastStages + Math.max(0, S.stageSem - 1)) * WEEKS + Math.max(0, S.week - 1);
++  // Upgrade old saves once. Reopening the phone or continuing never changes this ID.
++  if (typeof S.exchangeSessionId !== 'string' || !S.exchangeSessionId) S.exchangeSessionId = crypto.randomUUID();
++  if (!Number.isInteger(S.exchangeDay) || S.exchangeDay < 0) {
++    const previousStages = S.gpas.filter(g => g.stage !== S.stage).length;
++    S.exchangeDay = (previousStages + Math.max(0, S.stageSem - 1)) * WEEKS + Math.max(0, S.week - 1);
+   }
+   save();
    $('#start').classList.add('hidden');
-   $('#game').classList.remove('hidden');
-   renderAll();
-@@ -677,7 +685,19 @@
- });
+@@ -718,12 +720,17 @@ function exchangeClock() {
+   const elapsed = S.exchangeDay * 1440 + DAY_START * 60 + Math.floor(S.weekT * 1440);
+   const value = new Date(Date.UTC(2026, 10, 6) + elapsed * 60000);
+   return {
+-    sessionId: S.exchangeSessionId, date: value.toISOString().slice(0, 10),
++    sessionId: S.exchangeSessionId,
++    startedAt: { date: '2026-11-06', minute: DAY_START * 60 },
++    date: value.toISOString().slice(0, 10),
+     minute: value.getUTCHours() * 60 + value.getUTCMinutes(),
+     active: !S.ending, paused: !timeRunning(),
+   };
+ }
  
- // ── 3D 월드(world.js)와의 연결
-+function exchangeClock() {
-+  if (!S) return null;
-+  const elapsed = S.exchangeDay * 1440 + DAY_START * 60 + Math.floor(S.weekT * 1440);
-+  const value = new Date(Date.UTC(2026, 10, 6) + elapsed * 60000);
-+  return {
-+    sessionId: S.exchangeSessionId, date: value.toISOString().slice(0, 10),
-+    minute: value.getUTCHours() * 60 + value.getUTCMinutes(),
-+    active: !S.ending, paused: !timeRunning(),
-+  };
-+}
++// Keep the game checkpoint aligned with the exchange when continuing after reload.
++window.addEventListener('pagehide', () => { if (S && !S.ending) save(); });
 +
  window.Game = {
-+  exchangeClock,
+   exchangeClock,
    update,
-   enterBuilding,
-   placeStatus,
+diff --git a/phone/phone.js b/phone/phone.js
+index b765a0f..644c0a0 100644
+--- a/phone/phone.js
++++ b/phone/phone.js
+@@ -57,6 +57,7 @@ function openPhone() {
+   if (phoneOpen || !window.Game?.isActive() || window.Game.inputBlocked()) return;
+   pushModal(() => {                                  // 게임 모달 큐 안에서 열기 → 시간이 멈춘다
+     document.getElementById('modal').classList.add('hidden');
++    save();
+     if (!phoneEl) buildPhone();
+     phoneOpen = true;
+     phoneEl.querySelector('.pr-time').textContent = clockNow();
+@@ -72,6 +73,7 @@ function closePhone() {
+   phoneOpen = false;
+   phoneEl.classList.remove('show');
+   document.getElementById('phone-mini').classList.remove('away');
++  save();
+   nextModal();
+ }
+ 
+diff --git a/sleep.js b/sleep.js
+index 22ab57a..4d85cf6 100644
+--- a/sleep.js
++++ b/sleep.js
+@@ -18,7 +18,7 @@ function hoursUntilWake(h) { return (WAKE_HOUR - h + 24) % 24 || 24; }
+ // 시간을 건너뛴다 (06:00을 넘으면 그 주(=하루) 정산을 한 번 돌린다)
+ function advanceHours(s, hrs) {
+   let t = s.weekT + hrs / 24;
+-  if (t >= 1) { s.exchangeDay = (s.exchangeDay || 0) + 1; s.weekT = 0; weekStep(); t -= 1; }   // 거래소 날짜도 하루 넘김
++  if (t >= 1) { s.weekT = 0; weekStep(); t -= 1; }   // weekStep에서 거래소 날짜도 하루 넘김
+   s.weekT = Math.min(0.999, t);
+   renderAll();
+ }

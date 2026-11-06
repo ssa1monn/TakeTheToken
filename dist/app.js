@@ -1,4 +1,4 @@
-import { VERSION, DEPARTMENTS, RATING_LABELS, gpaWeight, ratingScore, createState, portfolio, indexHistory, queueReview, previewReview, closeMarket, courseConflicts, dateForDay, ensureMarketData } from './market.js';
+import { VERSION, DEPARTMENTS, RATING_LABELS, gpaWeight, ratingScore, createState, createGameState, portfolio, indexHistory, queueReview, previewReview, closeMarket, courseConflicts, dateForDay, ensureMarketData } from './market.js';
 
 import { currentClock, evaluationWindow, timeLabel } from './campus.js';
 import { advanceSimulation, initializeSimulation, processCampus, ensureDemoContent } from './simulation.js';
@@ -28,13 +28,13 @@ const catalog = await fetch('./data/catalog.json').then(r => { if (!r.ok) throw 
   throw error;
 });
 let state;
-const validState = saved => saved?.version === VERSION && saved.day >= 20 && Array.isArray(saved.selectedCourseIds) && catalog.professors.every(p => saved.stocks?.[p.id]?.history?.length === saved.stocks?.[catalog.professors[0].id]?.history?.length && saved.stocks?.[p.id]?.history?.length > 0) && saved.selectedCourseIds.every(id => catalog.courses.some(c => c.id === id));
+const validState = (saved, snapshot) => saved?.version === VERSION && Number.isInteger(saved.day) && saved.day >= 0 && Array.isArray(saved.selectedCourseIds) && catalog.professors.every(p => saved.stocks?.[p.id]?.history?.length === saved.stocks?.[catalog.professors[0].id]?.history?.length && saved.stocks?.[p.id]?.history?.length > 0) && saved.selectedCourseIds.every(id => catalog.courses.some(c => c.id === id)) && (!normalizeGameClock(snapshot) || saved.gameClock?.sessionId === snapshot.sessionId);
 try {
   const saved = storageKey ? await loadDemo(storageKey) : null;
-  if (validState(saved)) state = saved;
+  if (validState(saved, firstGameClock)) state = saved;
 } catch { /* A fresh demo is available when browser storage is unavailable. */ }
 if (!state) {
-  state = createState(catalog);
+  state = normalizeGameClock(firstGameClock) ? createGameState(catalog, firstGameClock) : createState(catalog);
   if (!embedded) initializeSimulation(state, catalog);
 }
 ensureMarketData(state, catalog);
@@ -43,22 +43,16 @@ function processGameCampus(target, source) {
   return processCampus(target, source);
 }
 function applyHostTime(snapshot) {
-  let result = applyGameClock(state, catalog, snapshot, { process: processGameCampus });
-  if (result.resetRequired) {
-    const previous = state;
-    state = createState(catalog);
-    state.selectedCourseIds = [...previous.selectedCourseIds];
-    state.gpa = previous.gpa;
-    state.favorites = [...previous.favorites];
-    result = applyGameClock(state, catalog, snapshot, { process: processGameCampus });
-  }
+  const result = applyGameClock(state, catalog, snapshot, { process: processGameCampus });
+  // Character selection chooses the storage key. A clock tick must never reset it.
+  if (result.resetRequired) return result;
   state.playing = snapshot.active !== false && !snapshot.paused;
   if (snapshot.legacyCursor) {
     try { localStorage.setItem(CLOCK_CURSOR_KEY, JSON.stringify(snapshot.legacyCursor)); } catch { /* Optional cursor cache. */ }
   }
   return result;
 }
-if (normalizeGameClock(firstGameClock)) applyHostTime(firstGameClock);
+if (normalizeGameClock(firstGameClock)) { applyHostTime(firstGameClock); ensureDemoContent(state, catalog); }
 else {
   ensureDemoContent(state, catalog);
   state.playing = !embedded;
@@ -480,12 +474,14 @@ async function syncGameClock() {
     const nextKey = gameStorageKey(snapshot);
     if (storageKey !== nextKey) {
       const saved = await loadDemo(nextKey);
-      state = validState(saved) ? saved : createState(catalog);
+      state = validState(saved, snapshot) ? saved : createGameState(catalog, snapshot);
       ensureMarketData(state, catalog);
+      ensureDemoContent(state, catalog);
       storageKey = nextKey;
       if (modal.open) modal.close();
       selectedCandleKey = null;
       pendingGameRender = true;
+      await save();
     }
     const result = applyHostTime(snapshot);
     if (result.changed) { await save(); pendingGameRender = true; }
