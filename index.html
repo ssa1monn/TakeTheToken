@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="phone/phone.css" />
+  <link rel="stylesheet" href="npcs.css" />
 </head>
 <body>
   <!-- 3D 캠퍼스 (항상 배경에 깔림) -->
@@ -66,7 +67,7 @@
     </aside>
 
     <div id="prompt"></div>
-    <div class="keys"><kbd>WASD</kbd> 이동 · <kbd>Shift</kbd> 달리기 · <kbd>E</kbd> 들어가기 · 드래그: 화면 돌리기 · 휠: 줌 · <kbd>P</kbd> 일시정지</div>
+    <div class="keys"><kbd>WASD</kbd> 이동 · <kbd>Shift</kbd> 달리기 · <kbd>E</kbd> 들어가기·말 걸기 · 드래그: 화면 돌리기 · 휠: 줌 · <kbd>P</kbd> 일시정지</div>
   </section>
 
   <div id="modal" class="hidden"><div id="modal-card"></div></div>
@@ -85,6 +86,7 @@
   <script src="places/town.js"></script>
   <script src="activities.js"></script>
   <script src="relations.js"></script>
+  <script src="npcs-talk.js"></script>
   <script src="easter/president.js"></script>
   <script src="phone/phone.js"></script>
   <script src="decay.js"></script>

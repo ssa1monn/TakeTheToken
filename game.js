@@ -675,6 +675,7 @@ function initStart() {
       • <b>WASD / 방향키</b>로 걷기, <b>Shift</b>로 달리기<br>
       • 마우스를 <b>드래그</b>하면 화면이 돌아간다 (좌우: 방향, 위아래: 기울기), 휠로 줌<br>
       • 건물 <b>문 앞</b>에서 <b>E</b>를 누르면 들어간다 (지금은 📚 학산도서관만 열려 있다). 미니맵의 흰 선이 문이다<br>
+      • 돌아다니는 <b>학생·교수님·주민</b>에게 다가가 <b>E</b>를 누르면 말을 걸 수 있다<br>
       • 시간은 계속 흐른다. 한 주는 하루로 압축된다 (06:00 → 다음 날 06:00). 왼쪽 위 시계를 보자<br>
       • 낮과 밤에 일어나는 일이 다르다. 도서관은 새벽 2~6시에 문을 닫는다<br>
       • 컨디션은 시간이 지나면 닳는다. 밤에 <b>내 방(제1기숙사)</b>에 들어가 자면 회복된다<br>
@@ -711,4 +712,7 @@ window.Game = {
   isActive: () => !!S && !S.ending,
   hour: () => hourOf(S),               // 0~24 (게임 전에는 아침 9시대)
   inputBlocked: () => !S || !!S.ending || modalOpen,
+  state: () => S,
+  // npcs.js: NPC 스몰토크 — 이벤트 창 그대로 (대답 → 결과 → 확인 후 after)
+  talk: (e, after) => { if (!S || S.ending || modalOpen) return false; pushModal(() => showEvent(e, after)); return true; },
 };

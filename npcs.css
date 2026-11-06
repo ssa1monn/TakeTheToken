@@ -1,0 +1,14 @@
+/* 캠퍼스 NPC 이름표 · 혼잣말 말풍선 (npcs.js) — transform은 CSS2DRenderer가 쓴다 */
+.npc-label { display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none;
+             transform-origin: bottom center; }
+.npc-tag { background: rgba(43, 38, 32, .78); color: #fffdf8; font-size: 10.5px; font-weight: 700; padding: 2px 7px;
+           border-radius: 99px; white-space: nowrap; opacity: 0; transition: opacity .25s; }
+.npc-label.near .npc-tag { opacity: 1; }
+.npc-bubble { position: relative; max-width: 180px; background: var(--paper, #fffdf8); color: var(--ink, #2b2620);
+              font-size: 12px; font-weight: 600; line-height: 1.35; padding: 5px 10px; border-radius: 12px;
+              box-shadow: 0 3px 10px rgba(40, 30, 20, .22); text-align: center; word-break: keep-all;
+              opacity: 0; transform: translateY(4px) scale(.96); transition: opacity .2s, transform .2s; }
+.npc-bubble::after { content: ''; position: absolute; left: 50%; bottom: -5px; margin-left: -5px;
+                     border: 5px solid transparent; border-bottom: 0; border-top-color: var(--paper, #fffdf8); }
+.npc-label.talking .npc-bubble { opacity: 1; transform: none; }
+.npc-bubble:empty { display: none; }

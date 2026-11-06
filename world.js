@@ -9,6 +9,7 @@ import { parseOSM, ptInPoly, polyEdgeDist, centroid } from './map/osm.js';
 import { buildCampus } from './map/builder.js';
 import { createDayNight } from './daynight.js';
 import { createMinimap } from './minimap.js';
+import { createNPCs } from './npcs.js';
 
 const PLAYER_R = 1.2;        // 충돌 반지름 (m)
 const PLAYER_SCALE = 2.2;    // 캐릭터 크기 (실제보다 크게 — 쿼터뷰에서 잘 보이게)
@@ -67,6 +68,7 @@ let near = null;               // 지금 출입 가능한 건물
 let started = false;
 let zoom = 140, yaw = CAM_YAW, pitch = CAM_PITCH, introSpin = true;
 let dayNight = null, minimap = null;
+let npcs = null, nearNpc = null;   // 돌아다니는 NPC (npcs.js) · 지금 말 걸 수 있는 NPC
 
 // ── 캐릭터 (로우폴리 · 머리 큰 비율)
 const avatar = makeAvatar();
@@ -121,6 +123,7 @@ fetch('assets/map/campus.osm')
     }
     nav = buildNav();
     player.p = spawnPoint();
+    npcs = createNPCs({ scene, nav, findPath, colliders, blocked: (x, y) => blocked(x, y), player: () => player.p });
     dayNight = createDayNight({ scene, sun, hemi, campus, follow: avatar.root });
     minimap = createMinimap(document.querySelector('#minimap canvas'), campus.mini,
       campus.buildings.filter(m => m.userData.poly).map(m => ({ poly: m.userData.poly, style: m.userData.style, doors: m.userData.doors })));
@@ -354,9 +357,17 @@ addEventListener('blur', () => keys.clear());
 prompt.addEventListener('click', tryEnter);
 
 function tryEnter() {
-  if (!started || window.Game.inputBlocked() || !near) return;
+  if (!started || window.Game.inputBlocked()) return;
+  if (nearNpc) { talkTo(nearNpc); return; }          // NPC가 바로 앞이면 말 걸기가 먼저
+  if (!near) return;
   moveTarget = null; goalMark.visible = false;
   window.Game.enterBuilding(near.name);
+}
+
+function talkTo(n) {
+  moveTarget = null; goalMark.visible = false;
+  player.face = Math.atan2(n.p[0] - player.p[0], n.p[1] - player.p[1]);   // 서로 마주 본다
+  npcs.talk(n, window.Game.state(), window.Game.hour());
 }
 
 renderer.domElement.addEventListener('wheel', e => {
@@ -417,6 +428,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(0.1, clock.getDelta()), t = clock.elapsedTime;
   if (started) window.Game.update(dt);
+  if (npcs && started) npcs.update(dt, window.Game.hour(), t);
   if (campus) stepPlayer(dt);
   const night = dayNight ? dayNight(window.Game.hour()) : 0;
   updateCamera(dt);
@@ -489,7 +501,12 @@ function stepPlayer(dt) {
 
   // 출입 안내
   near = started ? nearestBuilding() : null;
-  if (near && !window.Game.inputBlocked()) {
+  nearNpc = started && npcs ? npcs.nearest(player.p) : null;
+  if (nearNpc && !window.Game.inputBlocked()) {
+    const T = window.NPC_TYPES[nearNpc.type];
+    prompt.innerHTML = `<kbd>E</kbd> ${T.emoji} ${esc(T.name)}에게 말 걸기`;
+    prompt.className = 'show ready';
+  } else if (near && !window.Game.inputBlocked()) {
     const st = window.Game.placeStatus(near.name);
     const nm = esc(near.name || '이름 없는 건물');
     prompt.innerHTML = st.key
@@ -552,6 +569,7 @@ addEventListener('game-start', () => { started = true; });
 window.__world = {
   get player() { return player.p.slice(); },
   get near() { return near?.name || null; },
+  get npcs() { return npcs; },
   get faded() { return [...faded].map(m => m.userData.name || m.name); },
   get cam() { return camera.position.toArray().map(Math.round); },
   get facing() { const v = new THREE.Vector3(0, 0, 1).applyQuaternion(avatar.root.quaternion); return [v.x, -v.z]; }, // 지도 좌표 정면
