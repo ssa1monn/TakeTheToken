@@ -122,5 +122,13 @@ function drawBase(mini, buildings) {
     poly(b.poly, C[`roof_${b.style}`] || C.roof_misc);
     g.strokeStyle = 'rgba(60, 40, 30, .35)'; g.lineWidth = 1; g.stroke();
   }
+  // 문: 벽 바깥에 짧은 흰 선
+  g.strokeStyle = '#fffdf8'; g.lineCap = 'butt'; g.lineWidth = 2.5;
+  for (const b of buildings) for (const d of b.doors || []) {
+    if (d.level) continue;
+    const half = [-d.n[1] * d.w / 2, d.n[0] * d.w / 2], o = [d.p[0] + d.n[0] * 0.8, d.p[1] + d.n[1] * 0.8];
+    const [u0, v0] = P([o[0] - half[0], o[1] - half[1]]), [u1, v1] = P([o[0] + half[0], o[1] + half[1]]);
+    g.beginPath(); g.moveTo(u0, v0); g.lineTo(u1, v1); g.stroke();
+  }
   return cv;
 }

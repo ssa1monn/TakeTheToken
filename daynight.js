@@ -81,6 +81,7 @@ export function createDayNight({ scene, sun, hemi, campus, follow }) {
       lastN = n;
       for (const m of walls) m.emissiveIntensity = n * 1.15;
       campus.lampHead.emissiveIntensity = n * 2.5;
+      for (const m of campus.doorLights) m.emissiveIntensity = n * 2.5;
       pool.material.opacity = n * 0.42;
       pool.visible = n > 0.02;
       glow.intensity = n * 45;

@@ -40,6 +40,7 @@ export function parseOSM(text) {
   return {
     halfW: (maxlon - minlon) / 2 * KX, halfH: (maxlat - minlat) / 2 * KY,
     nodes, nodeTags, ways, wayById, relations,
+    proj, unproj: ([x, y]) => [lat0 + y / KY, lon0 + x / KX],   // 미터 ↔ 위경도
   };
 }
 

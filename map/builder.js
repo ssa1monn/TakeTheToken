@@ -4,6 +4,7 @@
 // ───────────────────────────────────────────────
 import * as THREE from 'three';
 import { ring, area2, ccw, centroid, ptInPoly, segDist, polyEdgeDist, insetPoly, stitch, makeClipper, rng } from './osm.js';
+import { DOOR_OVERRIDES } from './doors.js';
 
 const LEVEL_H = 3.6;       // 층고 (m)
 const BAY_W = 3.2;         // 창문 한 칸 폭 (m)
@@ -22,7 +23,10 @@ const COLORS = {
   trim: '#f7f3ea', unit: '#b9bec6',
   trunk: '#8a6a4a', leaf: '#5aa64e', leaf2: '#79bd5a',
   shelter: '#4a7bd0', glass: '#bfe0f0',
+  door_frame: '#3b4250', door_glass: '#8fb8cf',
 };
+const DOOR_W = { main: 3.2, yes: 1.8 };   // 문 폭 (m) — main: 정문(양여닫이 + 차양), yes: 보조문
+const DOOR_H = { main: 3.0, yes: 2.6 };
 // 벽 텍스처: [벽색, 유리색, 창틀색]
 const WALLS = {
   univ: ['#f4e7d1', '#86aac6', '#e2d2b8'],
@@ -309,7 +313,86 @@ export function buildCampus(osm, seed = 7) {
     return (Number.isNaN(lv) ? DEFAULT_LEVELS : Math.max(1, lv)) * LEVEL_H;
   };
 
-  const buildings = [], bldPolys = [];
+  // ── 문 위치: map/doors.js 직접 지정 → OSM entrance 태그 → 벽에 닿는 보행로 끝 → 길 쪽 벽 추정
+  const lampHead = new THREE.MeshStandardMaterial({ color: '#fff6dc', emissive: '#ffd27a', emissiveIntensity: 0, roughness: 0.4 });
+  const doorLights = [];                                     // 건물마다 복제한 문등 재질 (밤에 켜짐)
+  const walkSegs = [...roadSegs, ...pathSegs];
+  const pathEnds = [];
+  for (const wy of ways) {
+    const t = wy.tags;
+    if (!['footway', 'path', 'pedestrian', 'steps', 'cycleway', 'service'].includes(t.highway) || t.indoor || t.area === 'yes') continue;
+    if (t.level != null && t.level !== '0') continue;
+    if (wy.pts.length) pathEnds.push(wy.pts[0], wy.pts[wy.pts.length - 1]);
+  }
+  const allBldPolys = ways.filter(w => w.tags.building && w.pts.length >= 4).map(w => ring(w.pts));
+
+  // 다각형에서 p와 가장 가까운 벽 지점 { i: 변 번호, t: 0~1, L, d, p, n: 바깥 법선, u: 변 방향 }
+  const snapToWall = (poly, p) => {
+    let best = null;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy);
+      if (L < 1e-3) continue;
+      const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (L * L)));
+      const q = [a[0] + dx * t, a[1] + dy * t], d = Math.hypot(p[0] - q[0], p[1] - q[1]);
+      if (!best || d < best.d) best = { i, t, L, d, p: q, n: [dy / L, -dx / L], u: [dx / L, dy / L] };
+    }
+    return best;
+  };
+  // 벽 위치 s에 문을 낸다 (문이 변 밖으로 삐져나가지 않게 안쪽으로 당김)
+  const makeDoor = (poly, s, kind, source, level = 0) => {
+    const w = Math.min(DOOR_W[kind], Math.max(1.2, s.L - 0.6));
+    const at = s.L < w + 0.4 ? s.L / 2 : Math.max(w / 2 + 0.2, Math.min(s.L - w / 2 - 0.2, s.t * s.L));
+    const a = poly[s.i];
+    return { p: [a[0] + s.u[0] * at, a[1] + s.u[1] * at], n: s.n, u: s.u, w, h: DOOR_H[kind], kind, source, level, s };
+  };
+  const farFrom = (doors, p, min) => doors.every(d => Math.hypot(d.p[0] - p[0], d.p[1] - p[1]) >= min);
+
+  function doorsFor(wy, poly, area) {
+    const t = wy.tags;
+    const manual = DOOR_OVERRIDES[t.name] || DOOR_OVERRIDES[wy.id];
+    if (manual) return manual.map(o => makeDoor(poly, snapToWall(poly, osm.proj(o.lat, o.lon)), o.kind === 'main' ? 'main' : 'yes', 'manual', o.level || 0));
+
+    const doors = [];
+    // 1) OSM entrance 태그가 붙은 외곽선 노드 (staircase는 건물 안 계단실이라 제외)
+    for (const r of wy.refs) {
+      const nt = nodeTags.get(r);
+      if (!nt?.entrance || nt.entrance === 'staircase') continue;
+      const p = nodes.get(r);
+      if (farFrom(doors, p, 3)) doors.push(makeDoor(poly, snapToWall(poly, p), nt.entrance === 'main' ? 'main' : 'yes', 'osm', parseInt(nt.level, 10) || 0));
+    }
+    // 2) 건물 벽에 닿는 보행로 끝 — 길이 끝나는 곳이 보통 출입구
+    for (const e of pathEnds) {
+      const s = snapToWall(poly, e);
+      if (s.d > 3 || (s.d > 0.3 && ptInPoly(e[0], e[1], poly))) continue;   // 건물 안을 지나는 길은 제외
+      if (farFrom(doors, s.p, 12)) doors.push(makeDoor(poly, s, 'yes', 'path'));   // 여러 길이 한 문으로 모이는 경우 하나로
+    }
+    // 3) 추정: 문 밖 5m 지점이 길과 가장 가까운 벽 (다른 건물에 막힌 벽은 피함). 큰 건물은 반대편에 하나 더
+    if (!doors.some(d => d.level === 0)) {
+      const cands = [];
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i], b = poly[(i + 1) % poly.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (L < 2.2) continue;
+        const s = { i, t: 0.5, L, d: 0, u: [(b[0] - a[0]) / L, (b[1] - a[1]) / L], n: [(b[1] - a[1]) / L, -(b[0] - a[0]) / L], p: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] };
+        const probe = [s.p[0] + s.n[0] * 5, s.p[1] + s.n[1] * 5];
+        let score = Math.min(...walkSegs.map(([p, q, w]) => segDist(probe, p, q) - w / 2));
+        if (allBldPolys.some(q => !poly.includes(q[0]) && ptInPoly(probe[0], probe[1], q))) score += 50;
+        cands.push({ s, score: score - Math.min(L, 30) * 0.05 });       // 같으면 긴 벽 선호
+      }
+      cands.sort((x, y) => x.score - y.score);
+      if (cands[0]) doors.push(makeDoor(poly, cands[0].s, 'main', 'guess'));
+      const second = area > 1800 && cands.find(c => c.score < 40 && farFrom(doors, c.s.p, 30));
+      if (second) doors.push(makeDoor(poly, second.s, 'yes', 'guess'));
+    }
+    // 1층 문 하나는 정문으로
+    if (!doors.some(d => d.kind === 'main')) {
+      const i = doors.findIndex(d => d.level === 0);
+      if (i >= 0) doors[i] = makeDoor(poly, doors[i].s, 'main', doors[i].source, 0);
+    }
+    return doors;
+  }
+
+  const buildings = [], bldPolys = [], doorStats = {};
   for (const wy of ways) {
     const t = wy.tags;
     if (!t.building || wy.pts.length < 4) continue;
@@ -324,7 +407,7 @@ export function buildCampus(osm, seed = 7) {
     const top = base + h, style = bldStyle(t);
     const local = poly.map(([x, y]) => [x - cx, y - cy]);
 
-    const bb = new GeoBuilder(4); // 0 벽 1 지붕 2 장식 3 실외기
+    const bb = new GeoBuilder(7); // 0 벽 1 지붕 2 장식 3 실외기·디딤판 4 문틀 5 문유리 6 문등
     // 벽: 가로 = 창문 칸(정수 개로 맞춤), 세로 = 층
     for (let i = 0; i < local.length; i++) {
       const a = local[i], b = local[(i + 1) % local.length];
@@ -363,24 +446,49 @@ export function buildCampus(osm, seed = 7) {
       bb.poly(1, local, top);
     }
 
+    // 문: 문틀 + 유리문(+ 정문은 가운데 문살·차양) + 문등 + 1층이면 앞 디딤판
+    const doors = skyway ? [] : doorsFor(wy, poly, area).filter(d => d.level * LEVEL_H + d.h + 0.5 < top);
+    for (const d of doors) {
+      const p = [d.p[0] - cx, d.p[1] - cy], rot = Math.atan2(d.u[1], d.u[0]), z0 = d.level * LEVEL_H;
+      const at = k => [p[0] + d.n[0] * k, p[1] + d.n[1] * k];        // 벽에서 바깥으로 k(m)
+      const main = d.kind === 'main';
+      bb.box(4, ...at(0.06), z0, d.w + 0.3, 0.12, d.h + 0.15, rot);
+      bb.box(5, ...at(0.08), z0, d.w, 0.14, d.h, rot);
+      if (main) {
+        bb.box(4, ...at(0.09), z0, 0.08, 0.17, d.h, rot);
+        bb.box(2, ...at(0.9), z0 + d.h + 0.35, d.w + 1.6, 1.8, 0.22, rot);
+        bb.box(6, ...at(0.3), z0 + d.h + 0.12, 0.7, 0.2, 0.12, rot);
+      } else {
+        bb.box(6, ...at(0.1), z0 + d.h + 0.3, 0.45, 0.16, 0.16, rot);
+      }
+      if (z0 === 0) bb.box(3, ...at(0.75), 0, d.w + 1.2, 1.5, 0.14, rot);
+      doorStats[d.source] = (doorStats[d.source] || 0) + 1;
+    }
+
     const wallMat = new THREE.MeshStandardMaterial({ map: windowTexture(style), roughness: 0.8 });
     wallMat.userData.lit = windowLitTexture(style);   // 밤 조명은 게임(world.js)에서 켠다
+    const doorLight = lampHead.clone();
+    doorLights.push(doorLight);
     const mats = [
       wallMat,
       mat(`roof_${style}`).clone(), mat('trim').clone(), mat('unit').clone(),
+      mat('door_frame').clone(), mat('door_glass').clone(), doorLight,
     ];
     const m = bb.mesh(mats, { cast: true, name: `bld_${wy.id}` });
     m.position.set(cx, 0, -cy);
     m.userData = { osmId: wy.id, name: t.name || '', kind: t.building, levels: t['building:levels'] || '', style,
                    height: Math.round((top + (parapet ? PARAPET_H : 0)) * 10) / 10,
-                   poly, skyway };   // poly: 2D 바닥 윤곽(월드 좌표) — 게임 충돌/출입 판정용
+                   poly, skyway,   // poly: 2D 바닥 윤곽(월드 좌표) — 게임 충돌/출입 판정용
+                   doors: doors.map(({ p, n, w, kind, level, source }) => ({ p, n, w, kind, level, source })) };
     group.add(m);
     buildings.push(m);
   }
 
+  const doorFronts = buildings.flatMap(m => m.userData.doors.filter(d => d.level === 0).map(d => [d.p[0] + d.n[0] * 2, d.p[1] + d.n[1] * 2]));
   const blocked = (x, y, clear = 1.5) =>
     bldPolys.some(p => ptInPoly(x, y, p) || polyEdgeDist([x, y], p) < clear) ||
-    roadSegs.some(([a, b, w]) => segDist([x, y], a, b) < w / 2 + clear);
+    roadSegs.some(([a, b, w]) => segDist([x, y], a, b) < w / 2 + clear) ||
+    doorFronts.some(([dx, dy]) => Math.hypot(x - dx, y - dy) < 4);   // 문 앞은 비워 둔다
 
   // 6) 나무: 공원 + 가로수 + OSM 개별 나무
   const trees = [];
@@ -463,13 +571,12 @@ export function buildCampus(osm, seed = 7) {
   };
   placeLamps(roadSegs, 30, 1.2, true);
   placeLamps(pathSegs, 24, 1.0, false);
-  const lampHead = new THREE.MeshStandardMaterial({ color: '#fff6dc', emissive: '#ffd27a', emissiveIntensity: 0, roughness: 0.4 });
   group.add(lampMeshes(lamps, lampHead));
 
   return {
-    group, buildings, lamps, lampHead,
+    group, buildings, lamps, lampHead, doorLights,
     mini: { ...mini, halfW, halfH, colors: COLORS },
-    stats: { buildings: buildings.length, trees: trees.length, busStops: seen.length, lamps: lamps.length },
+    stats: { buildings: buildings.length, trees: trees.length, busStops: seen.length, lamps: lamps.length, doors: doorStats },
   };
 }
 

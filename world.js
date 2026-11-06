@@ -13,7 +13,7 @@ import { createMinimap } from './minimap.js';
 const PLAYER_R = 1.2;        // 충돌 반지름 (m)
 const PLAYER_SCALE = 2.2;    // 캐릭터 크기 (실제보다 크게 — 쿼터뷰에서 잘 보이게)
 const WALK = 14, RUN = 26;   // 이동 속도 (m/s) — 캠퍼스가 1km라 실제보다 빠르게
-const ENTER_DIST = 4;        // 건물 벽에서 이 거리 안이면 출입 가능
+const ENTER_DIST = 4;        // 문 앞 이 거리 안이면 출입 가능
 const LABEL_DIST = 150;      // 플레이어 주변 이 거리 안의 건물만 이름표
 const CAM_YAW = Math.PI / 4, CAM_PITCH = 1.05;   // 시작 카메라 방향 (드래그로 바뀜)
 const PITCH_MIN = 0.45, PITCH_MAX = 1.4;          // 기울기 한계: 너무 눕거나 정수리만 보이지 않게
@@ -55,7 +55,7 @@ sun.shadow.normalBias = 0.6;
 scene.add(sun, sun.target);
 
 // ── 상태
-let campus = null, bounds = null;
+let campus = null, bounds = null, osm = null;
 const colliders = [];          // { mesh, name, poly, box: [minx, miny, maxx, maxy] }
 const labels = [];             // { obj, el, c, mesh }
 const markers = [];            // { obj, el, c, name }
@@ -103,7 +103,7 @@ scene.add(goalMark);
 fetch('assets/map/campus.osm')
   .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
   .then(text => {
-    const osm = parseOSM(text);
+    osm = parseOSM(text);
     bounds = [osm.halfW - 4, osm.halfH - 4];
     campus = buildCampus(osm);
     const maxAniso = renderer.capabilities.getMaxAnisotropy();
@@ -113,7 +113,8 @@ fetch('assets/map/campus.osm')
       const { poly, skyway, name } = mesh.userData;
       if (!poly || skyway) continue;
       const xs = poly.map(p => p[0]), ys = poly.map(p => p[1]);
-      const c = { mesh, name, poly, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], center: centroid(poly) };
+      const c = { mesh, name, poly, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], center: centroid(poly),
+                  doors: mesh.userData.doors.filter(d => d.level === 0) };   // 땅에서 들어갈 수 있는 문만
       colliders.push(c);
       if (name) addLabel(c);
       if (name && window.Game.placeStatus(name).key) addMarker(c);
@@ -122,7 +123,8 @@ fetch('assets/map/campus.osm')
     player.p = spawnPoint();
     dayNight = createDayNight({ scene, sun, hemi, campus, follow: avatar.root });
     minimap = createMinimap(document.querySelector('#minimap canvas'), campus.mini,
-      campus.buildings.filter(m => m.userData.poly).map(m => ({ poly: m.userData.poly, style: m.userData.style })));
+      campus.buildings.filter(m => m.userData.poly).map(m => ({ poly: m.userData.poly, style: m.userData.style, doors: m.userData.doors })));
+    console.info('[campus]', campus.stats);
     document.getElementById('loading')?.remove();
   })
   .catch(err => { const l = document.getElementById('loading'); if (l) l.textContent = '캠퍼스를 만들지 못했다: ' + err.message; console.error(err); });
@@ -251,31 +253,32 @@ function tryMove(dx, dy) {
   return false;
 }
 
+// 지금 서 있는 곳 앞의 문 → 그 건물 (문 앞 ENTER_DIST 안, 문 바깥쪽, 문 폭 근처일 때만)
 function nearestBuilding() {
   let best = null, bd = Infinity;
+  const [x, y] = player.p;
   for (const c of colliders) {
-    const b = c.box, [x, y] = player.p;
+    const b = c.box;
     if (x < b[0] - ENTER_DIST || x > b[2] + ENTER_DIST || y < b[1] - ENTER_DIST || y > b[3] + ENTER_DIST) continue;
-    const d = polyEdgeDist(player.p, c.poly);
-    if (d < ENTER_DIST && d < bd) { bd = d; best = c; }
+    for (const d of c.doors) {
+      const rx = x - d.p[0], ry = y - d.p[1];
+      const out = rx * d.n[0] + ry * d.n[1];                 // 벽에서 바깥으로 떨어진 거리
+      const side = Math.abs(rx * d.n[1] - ry * d.n[0]);      // 문 중심에서 옆으로 벗어난 거리
+      if (out < -0.5 || out > ENTER_DIST || side > d.w / 2 + 1.5) continue;
+      const dist = Math.hypot(rx, ry);
+      if (dist < bd) { bd = dist; best = c; }
+    }
   }
   return best;
 }
 
-// 건물 벽에서 가장 가까운 바깥 지점 (클릭으로 건물까지 걸어갈 때 목적지)
+// 건물의 문 앞 지점 중 플레이어와 가장 가까운 곳 (__world.walkTo 목적지)
 function doorPoint(c) {
   let best = null, bd = Infinity;
-  const P = player.p, n = c.poly.length;
-  for (let i = 0; i < n; i++) {
-    const a = c.poly[i], b = c.poly[(i + 1) % n];
-    const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
-    if (L2 < 1e-6) continue;
-    const t = Math.max(0.1, Math.min(0.9, ((P[0] - a[0]) * dx + (P[1] - a[1]) * dy) / L2));
-    const q = [a[0] + t * dx, a[1] + t * dy], L = Math.sqrt(L2);
-    const out = [dy / L, -dx / L];                     // 반시계 다각형의 바깥 법선
-    const p = [q[0] + out[0] * (PLAYER_R + 1.2), q[1] + out[1] * (PLAYER_R + 1.2)];
-    const d = Math.hypot(p[0] - P[0], p[1] - P[1]);
-    if (d < bd && !blocked(p[0], p[1]) && reachable(p)) { bd = d; best = p; }
+  for (const d of c.doors) {
+    const p = [d.p[0] + d.n[0] * (PLAYER_R + 1.2), d.p[1] + d.n[1] * (PLAYER_R + 1.2)];
+    const dist = Math.hypot(p[0] - player.p[0], p[1] - player.p[1]);
+    if (dist < bd && !blocked(p[0], p[1]) && reachable(p)) { bd = dist; best = p; }
   }
   return best;
 }
@@ -551,6 +554,16 @@ window.__world = {
   get cam() { return camera.position.toArray().map(Math.round); },
   get facing() { const v = new THREE.Vector3(0, 0, 1).applyQuaternion(avatar.root.quaternion); return [v.x, -v.z]; }, // 지도 좌표 정면
   walkTo(name) { const c = colliders.find(x => x.name.includes(name)); const p = c && doorPoint(c); if (p) setTarget(p, c); return !!moveTarget; },
+  // 문 위치 확인: 건물 이름 → [{ kind, source: manual|osm|path|guess, lat, lon }]
+  doors(name) { const c = colliders.find(x => x.name.includes(name)); return c && c.mesh.userData.doors.map(d => ({ kind: d.kind, source: d.source, level: d.level, lat: +osm.unproj(d.p)[0].toFixed(7), lon: +osm.unproj(d.p)[1].toFixed(7) })); },
+  // 실제 문 앞에 서서 실행 → map/doors.js에 붙여넣을 줄을 돌려준다
+  doorHere(kind = 'main') {
+    let best = null, bd = Infinity;
+    for (const c of colliders) { const d = polyEdgeDist(player.p, c.poly); if (d < bd) { bd = d; best = c; } }
+    if (!best || bd > 8) return '건물 벽 가까이(8m 안)에 서서 다시 실행하세요';
+    const [lat, lon] = osm.unproj(player.p);
+    return `'${best.name || best.mesh.userData.osmId}': [{ lat: ${lat.toFixed(7)}, lon: ${lon.toFixed(7)}, kind: '${kind}' }],`;
+  },
 };
 
 addEventListener('resize', () => {
