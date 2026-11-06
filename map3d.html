@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>캠퍼스 3D 맵</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    html, body { height: 100%; overflow: hidden; background: #cfe8f7; font-family: Pretendard, system-ui, sans-serif; }
+    #view { position: fixed; inset: 0; }
+    .hud { position: fixed; top: 16px; left: 16px; background: rgba(255,255,255,.92); border-radius: 14px; padding: 12px 16px;
+           box-shadow: 0 6px 20px rgba(40,60,90,.15); font-size: 13px; color: #445; line-height: 1.5; }
+    .hud b { font-size: 16px; color: #223; }
+    #tip { position: fixed; pointer-events: none; background: #223; color: #fff; padding: 5px 10px; border-radius: 8px;
+           font-size: 13px; font-weight: 600; transform: translate(-50%, -140%); white-space: nowrap; display: none; }
+    #info { position: fixed; right: 16px; bottom: 16px; width: 260px; background: rgba(255,255,255,.95); border-radius: 14px;
+            padding: 14px 16px; box-shadow: 0 6px 20px rgba(40,60,90,.15); display: none; color: #334; font-size: 13px; }
+    #info h3 { font-size: 16px; margin-bottom: 6px; color: #223; }
+    .labels { position: fixed; inset: 0; pointer-events: none; }
+    .blabel { background: rgba(255,255,255,.92); color: #334; font-size: 11px; font-weight: 700; padding: 3px 8px 3px 4px;
+              border-radius: 99px; box-shadow: 0 2px 6px rgba(40,60,90,.2); white-space: nowrap; opacity: 0;
+              transition: opacity .25s; display: flex; gap: 5px; align-items: center; } /* transform은 CSS2DRenderer가 씀 */
+    .blabel i { font-style: normal; background: #d9785a; color: #fff; border-radius: 99px; padding: 1px 6px; font-size: 10px; }
+    .blabel.show { opacity: 1; }
+    .blabel.active { background: #223; color: #fff; }
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; font-size: 15px; color: #556; }
+  </style>
+</head>
+<body>
+  <div id="view"></div>
+  <div id="loading">캠퍼스 짓는 중…</div>
+  <div class="hud"><b>인천대 송도캠퍼스</b><br>드래그: 이동 · 우클릭 드래그: 회전 · 휠: 줌<br>건물에 마우스를 올리거나 클릭해 보세요</div>
+  <div id="tip"></div>
+  <div id="info"></div>
+
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    } }
+  </script>
+  <script type="module" src="map3d.js"></script>
+</body>
+</html>

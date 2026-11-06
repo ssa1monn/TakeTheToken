@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>다시 사는 대학생활</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 3D 캠퍼스 (항상 배경에 깔림) -->
+  <div id="view"></div>
+  <div id="loading">캠퍼스 짓는 중…</div>
+
+  <!-- 시작 화면 -->
+  <section id="start">
+    <div class="start-card">
+      <div class="start-badge">인생 2회차 캠퍼스 시뮬레이션</div>
+      <h1>다시 사는<br><span>대학생활</span></h1>
+      <p class="muted">신입생부터 졸업, 그리고 대학원까지. 대학 생활을 압축해서 다시 산다.<br>이번엔 좀 다르게 살 수 있을까?</p>
+      <label class="field">이름<input id="name" maxlength="10" placeholder="새내기" /></label>
+      <div class="field">학과</div>
+      <div id="major-list"></div>
+      <button id="btn-start" class="primary-btn">입학하기</button>
+      <button id="btn-continue" class="ghost-btn hidden">이어하기</button>
+    </div>
+  </section>
+
+  <!-- 게임 UI (3D 위에 겹침) -->
+  <section id="game" class="hidden">
+    <header id="hud">
+      <div class="logo">다시 사는 <b>대학생활</b></div>
+      <div class="sem">
+        <b id="sem-label">1학년 1학기</b>
+        <span id="week-label" class="muted">1주차 / 16</span>
+        <div class="week-track"><div id="week-bar"></div><i style="left:50%" title="중간고사"></i><i style="left:100%" title="기말고사"></i></div>
+      </div>
+      <div class="hs"><small>💰 돈</small><b id="money">0</b></div>
+      <div class="hs wide"><small>❤️ 컨디션 <b id="cond">0</b></small><div class="bar"><div id="cond-bar" class="fill"></div></div></div>
+      <div class="hs wide"><small>📖 이번 학기 공부 <b id="study-now">0</b></small><div class="bar"><div id="study-bar" class="fill blue"></div></div></div>
+      <div class="speed">
+        <button data-speed="0" title="일시정지 (P)">⏸</button>
+        <button data-speed="1">▶</button>
+        <button data-speed="2">▶▶</button>
+        <button data-speed="4">▶▶▶</button>
+      </div>
+    </header>
+
+    <!-- 왼쪽 위: 원형 미니맵 + 시계 바 -->
+    <div id="minimap" title="클릭하면 그곳으로 걸어간다"><canvas></canvas></div>
+    <div id="clock" data-phase="day">
+      <div class="clock-top"><span id="clock-phase">☀️ 낮</span><b id="clock-time">09:00</b></div>
+      <div class="clock-bar"><i id="clock-needle"></i></div>
+      <div class="clock-ticks"><span style="left:0%">06</span><span style="left:25%">12</span><span style="left:50%">18</span><span style="left:75%">24</span><span style="left:100%">06</span></div>
+    </div>
+
+    <aside id="right">
+      <div class="tabs">
+        <button data-tab="eval">학생 평가</button>
+        <button data-tab="board">대나무숲</button>
+        <button data-tab="tree">테크트리</button>
+        <button id="panel-toggle" title="패널 접기/펼치기">⇥</button>
+      </div>
+      <div id="right-body"></div>
+    </aside>
+
+    <div id="prompt"></div>
+    <div class="keys"><kbd>WASD</kbd> 이동 · <kbd>Shift</kbd> 달리기 · <kbd>E</kbd> 들어가기 · 클릭/미니맵 클릭: 거기로 걷기 · 휠: 줌 · <kbd>P</kbd> 일시정지</div>
+  </section>
+
+  <div id="modal" class="hidden"><div id="modal-card"></div></div>
+  <div id="toasts"></div>
+
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    } }
+  </script>
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+  <script type="module" src="world.js"></script>
+</body>
+</html>
