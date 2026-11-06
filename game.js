@@ -293,7 +293,8 @@ function enterBuilding(name) {
   if (!st.ok) { if (st.reason) toast(`🚪 ${st.reason}`); return; }
   const s = S, place = PLACES[st.key];
   const h = hourOf(s);
-  const actEv = activityPick(s, st.key, h);      // activities.js: 이 건물의 동아리·스터디 등 (가입 권유 / 활동 이벤트)
+  const actEv = presidentPick(s, st.key, h)      // easter/president.js: 대학본부 총장실 이스터에그
+    || activityPick(s, st.key, h);               // activities.js: 이 건물의 동아리·스터디 등 (가입 권유 / 활동 이벤트)
   const all = place.events().filter(e => (!e.when || e.when(s)) && !(e.once && s.seen[e.id]));
   if (!all.length && !actEv) { toast(`🚪 ${place.name}: 오늘은 별일이 없다`); return; }
   const timed = all.filter(e => fitsTime(e, h));
