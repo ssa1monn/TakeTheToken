@@ -178,6 +178,16 @@ kbd { display: inline-block; background: #fff; color: var(--ink); border-radius:
 .sc-stats div { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; display: flex; flex-direction: column; }
 .sc-stats small { color: var(--muted); font-size: 11px; }
 .sc-stats b { font-size: 15px; }
+/* 내 활동 (activities.js) */
+.act { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; background: #fff; }
+.act-top { display: flex; justify-content: space-between; align-items: center; }
+.act-quit { border: 1px solid var(--line); background: transparent; border-radius: 7px; font-size: 11px; padding: 2px 8px; color: var(--muted); }
+.act-quit:hover { color: var(--red); border-color: var(--red); }
+.act-fx { font-size: 12px; margin-top: 4px; }
+.act-meta { font-size: 11px; margin-top: 2px; }
+.act-hint { font-size: 12px; margin-top: 4px; }
+.act-hint summary { cursor: pointer; color: var(--muted); }
+.act-hint div { margin-top: 4px; line-height: 1.7; }
 .rep { margin-bottom: 10px; }
 .rep-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
 .rep-c { font-size: 12.5px; color: var(--muted); font-style: italic; margin-top: 3px; }

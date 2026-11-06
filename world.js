@@ -328,7 +328,9 @@ function updateOverlays(t) {
     mk.el.className = 'bmarker' + (st.ok ? ' ready' : ' used');
     mk.el.textContent = st.ok ? '!' : '✓';
     mk.obj.position.y = mk.obj.userData.baseY + Math.sin(t * 3) * 1.2;
-    mk.obj.visible = started;
+    // 건물이 많아서 가까운 곳(또는 지금 서 있는 곳)만 표시
+    const d = Math.hypot(mk.c.center[0] - player.p[0], mk.c.center[1] - player.p[1]);
+    mk.obj.visible = started && (d < LABEL_DIST * 1.3 || mk.c === near);
   }
 }
 

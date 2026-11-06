@@ -119,7 +119,7 @@ function nickname(s) {
   if (rom >= 30) return '캠퍼스 낭만 전도사';
   if (spec >= 35) return '걸어 다니는 이력서';
   if (res >= 15) return '교수님의 애제자 (노예라고도 함)';
-  if (lib < 2) return '도서관 위치 모르는 사람';
+  if (lib < 1 && g < 3.0) return '도서관 위치 모르는 사람';
   if (g < 2.0) return '출석부의 유령';
   return '평범한 대학생 (가장 어려운 것)';
 }
@@ -136,7 +136,7 @@ function overallScore(s) {
   const sem = Math.max(1, s.gpas.length);
   const g = s.gpas.length ? cumGpa(s) : 0;
   const repAvg = (s.rep.prof + s.rep.peers + s.rep.seniors + s.rep.parents) / 4;
-  const growth = (s.stats.social + s.stats.spec + s.stats.romance + s.stats.research) / (sem * 40);
+  const growth = (s.stats.social + s.stats.spec + s.stats.romance + s.stats.research) / (sem * 90);   // 건물이 많아져 스탯이 빨리 쌓이므로 기준을 높임
   return Math.round(g / 4.5 * 35 + repAvg / 100 * 30 + Math.min(1, growth) * 35);
 }
 function overallGrade(score) {
@@ -169,7 +169,7 @@ function update(dt) {
   if (!timeRunning()) return;
   S.weekT += dt * speed / WEEK_SECONDS;
   if (S.weekT >= 1) { S.weekT = 0; weekStep(); }
-  else maybeTimedEvent(S);
+  else { maybeTimedEvent(S); relationTick(S); }   // relationTick: relations.js (부모님 정기 연락)
   renderWeekBar();
   renderClock();
 }
@@ -198,6 +198,7 @@ function weekStep() {
     // 매주 기본: 수업 출석 · 생활비 · 자연 회복
     applyFx(s, { study: 2, cond: 2, money: allowance(s) - 1 });
     if (s.stage !== 'ug') applyFx(s, { research: 3, cond: -2 }); // 연구실 생활
+    weeklyActivities(s);                                           // 소속 활동 (activities.js)
   }
 
   if (s.stage !== 'ug') {
@@ -292,13 +293,16 @@ function enterBuilding(name) {
   if (!st.ok) { if (st.reason) toast(`🚪 ${st.reason}`); return; }
   const s = S, place = PLACES[st.key];
   const h = hourOf(s);
-  const all = place.events().filter(e => !e.when || e.when(s));
+  const actEv = activityPick(s, st.key, h);      // activities.js: 이 건물의 동아리·스터디 등 (가입 권유 / 활동 이벤트)
+  const all = place.events().filter(e => (!e.when || e.when(s)) && !(e.once && s.seen[e.id]));
+  if (!all.length && !actEv) { toast(`🚪 ${place.name}: 오늘은 별일이 없다`); return; }
   const timed = all.filter(e => fitsTime(e, h));
   const pool = timed.length ? timed : all;
   const recent = s.recentPlaceEvents[st.key] || [];
   const fresh = pool.filter(e => !recent.includes(e.id));
-  const ev = pick(fresh.length ? fresh : pool);
+  const ev = actEv || pick(fresh.length ? fresh : pool);
   s.recentPlaceEvents[st.key] = [ev.id, ...recent].slice(0, 3);
+  if (ev.once) s.seen[ev.id] = true;
   s.usedThisWeek[st.key] = true;
   s.semVisits[st.key] = (s.semVisits[st.key] || 0) + 1;
   inc(s, 'visit_' + st.key);
@@ -581,6 +585,7 @@ function evalHtml(s) {
         <div><small>🔬 연구</small><b>${fmt(s.stats.research)}</b></div>
       </div>
     </div>
+    ${activitiesHtml(s)}
     <h4>남들이 보는 나</h4>${repRows}
     ${gp ? `<h4>학기별 평점</h4><div class="gpas">${gp}</div>` : ''}`;
 }
@@ -646,6 +651,7 @@ function initStart() {
       • 시간은 계속 흐른다. 한 주는 하루로 압축된다 (06:00 → 다음 날 06:00). 왼쪽 위 시계를 보자<br>
       • 낮과 밤에 일어나는 일이 다르다. 도서관은 새벽 2~6시에 문을 닫는다<br>
       • 왼쪽 위 <b>미니맵</b>은 화면 방향대로 돌아간다. 빨간 <b>!</b>가 들어갈 수 있는 건물이다<br>
+      • 학생회관·도서관 등에서 <b>동아리·스터디</b>에 가입하면 매주 스탯이 쌓인다 (최대 ${MAX_ACTIVITIES}개, 오른쪽 패널에서 확인)<br>
       • 교수님·동기·선후배·부모님이 당신을 <b>평가</b>한다`));
   };
 }
